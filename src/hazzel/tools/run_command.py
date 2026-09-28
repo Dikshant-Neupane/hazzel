@@ -7,6 +7,7 @@ from .. import ui
 from .. import wincompat
 from ..config import PROJECT_ROOT, resolve_project_path
 from .approvals import check as _approval_check
+from .approvals import check_persistent as _persistent_check
 from .approvals import remember as _approval_remember
 from .approvals import repeat_denial as _repeat_denial
 
@@ -143,21 +144,28 @@ def run_command(command, timeout=None, cwd=None, description=None, preapproved=F
     except ValueError as error:
         return str(error)
     if not preapproved and not is_safe_command(text):
-        key = ("run_command", text)
-        prior = _approval_check(key)
-        if prior is False:
+        try:
+            persistent = _persistent_check("run_command")
+        except Exception:
+            persistent = "ask"
+        if persistent == "deny":
             return _repeat_denial("Command cancelled by user")
-        if prior is None:
-            prompt = f"Hazzel wants to run: {text}"
-            if bg:
-                prompt += "\n(runs in the background — poll with /jobs)"
-            if description:
-                prompt += f"\n{description}"
-            prompt += "\nAllow?"
-            approved = ui.confirm(prompt)
-            _approval_remember(key, approved)
-            if not approved:
-                return "Command cancelled by user"
+        if persistent != "always":
+            key = ("run_command", text)
+            prior = _approval_check(key)
+            if prior is False:
+                return _repeat_denial("Command cancelled by user")
+            if prior is None:
+                prompt = f"Hazzel wants to run: {text}"
+                if bg:
+                    prompt += "\n(runs in the background — poll with /jobs)"
+                if description:
+                    prompt += f"\n{description}"
+                prompt += "\nAllow?"
+                approved = ui.confirm(prompt)
+                _approval_remember(key, approved)
+                if not approved:
+                    return "Command cancelled by user"
     _checkpoint_destructive_targets(text)
     if bg:
         return _bg.start(text, workdir, description or "")

@@ -477,6 +477,69 @@ def main(argv=None):
             else:
                 ui.show_error("Usage: /budget [session|daily] <usd> | /budget warn <pct> | /budget off")
             continue
+        if low_in == "allow" or low_in == "/allow" or low_in.startswith("/allow ") or low_in.startswith("allow "):
+            raw = user_input.strip()
+            arg = (raw[6:].strip() if raw.startswith("/") else raw[5:].strip())
+            parts = arg.split()
+            _allow_aliases = {
+                "run": "run_command", "run_command": "run_command", "shell": "run_command", "bash": "run_command",
+                "write": "write_file", "write_file": "write_file",
+                "edit": "edit_file", "edit_file": "edit_file",
+                "apply": "apply_edits", "apply_edits": "apply_edits",
+                "commit": "git_commit", "git_commit": "git_commit",
+                "all": "all", "everything": "all",
+            }
+            _allow_modes = {
+                "always": "always", "allow": "always", "yes": "always", "y": "always",
+                "deny": "deny", "never": "deny", "no": "deny", "n": "deny", "block": "deny",
+                "ask": "ask", "prompt": "ask", "off": "ask", "clear": "ask", "reset": "ask", "default": "ask",
+            }
+            if not parts:
+                config.set_allow("all", "always")
+                console.print("  Allow-all on — Hazzel won't ask for anything. (/allow clear to go back to asking)", style="dim")
+                console.print()
+                continue
+            if len(parts) == 1 and parts[0] in ("list", "ls", "show", "status"):
+                rules = config.get_allow_rules()
+                console.print()
+                if not rules:
+                    console.print("  Allow: asking for everything (default).", style="dim")
+                else:
+                    for tool, mode in sorted(rules.items()):
+                        console.print(f"  {tool}: {mode}", style="dim")
+                console.print("  Bare /allow = allow everything · /allow clear = ask again.", style="dim")
+                console.print()
+                continue
+            if len(parts) == 1 and parts[0] in ("clear", "off", "reset"):
+                config.clear_allow()
+                console.print("  Allow rules cleared — back to asking.", style="dim")
+                console.print()
+                continue
+            if len(parts) == 1:
+                tool = _allow_aliases.get(parts[0].lower())
+                if tool is None:
+                    ui.show_error("Usage: /allow [all|run_command|write_file|edit_file|apply_edits|git_commit [always|ask|deny]] | /allow clear")
+                    continue
+                console.print(f"  {tool}: {config.get_allow(tool)}", style="dim")
+                console.print()
+                continue
+            if len(parts) == 2:
+                tool = _allow_aliases.get(parts[0].lower())
+                mode = _allow_modes.get(parts[1].lower())
+                if tool is None or mode is None:
+                    ui.show_error("Usage: /allow [all|run_command|write_file|edit_file|apply_edits|git_commit [always|ask|deny]] | /allow clear")
+                    continue
+                config.set_allow(tool, mode)
+                if tool == "all" and mode == "always":
+                    console.print("  Allow-all on — Hazzel won't ask for anything. (/allow clear to go back to asking)", style="dim")
+                elif mode == "ask":
+                    console.print(f"  {tool}: back to asking.", style="dim")
+                else:
+                    console.print(f"  {tool}: {mode}.", style="dim")
+                console.print()
+                continue
+            ui.show_error("Usage: /allow [all|run_command|write_file|edit_file|apply_edits|git_commit [always|ask|deny]] | /allow clear")
+            continue
         if low_in == "retry" or low_in.startswith("/retry"):
             if not (_last_user_input or "").strip():
                 ui.show_error("No previous message — ask something first.")

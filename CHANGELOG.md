@@ -5,6 +5,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 ### Added
+- `/allow` permissions: bare `/allow` turns on allow-all (no prompts, diffs still shown); `/allow <tool> always|ask|deny` sets a per-tool rule (`run_command`, `write_file`, `edit_file`, `apply_edits`, `git_commit`), `/allow list` shows rules, `/allow clear` goes back to asking. Persisted in `config.json`, survives restarts; plan-mode and `hazzel -p` read-only blocks still win, safe commands still skip.
 - `glob` tool: find files by path pattern (`**/*.py`, `src/**/test_*.py`, `**/*.{json,toml}`) with `*`/`**`/`?`/`[a-z]`/`{a,b}` support. Read-only, plan-mode safe, parallel-safe, TTL-cached and invalidated by file writes. Results are project-relative with `/` separators, capped at 100 matches, and a trailing `/` in the pattern matches directories only. Fills the gap where `list_files` was single-level and `search_files` only greps contents.
 - Zero-LLM fast paths for lookup-shaped requests: "find all *.py files", "find test_*.py files in tests", `grep "x" in src`, and "search the web for X" are now answered locally instead of spending a model round trip. Anything with a question word, conjunction, or pronoun still falls through to the model.
 - Transient-failure retry: 5xx, timeouts, and dropped connections get one short jittered retry instead of failing the whole turn. `Retry-After` is honored verbatim when a provider sends it; rate-limit backoff is now jittered so parallel clients don't retry in lockstep.

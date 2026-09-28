@@ -38,6 +38,7 @@ _HELP_SECTIONS = [
         ("/retry", "re-run last message"),
         ("/jobs", "background jobs [id|wait id|kill id|clear]"),
         ("/usage", "show token usage"),
+        ("/allow", "allow-all, no prompts [tool always|ask|deny]"),
         ("/undo", "undo last change, keeps your edits [preview]"),
         ("/redo", "reapply undone change [preview]"),
         ("/logout", "clear saved API keys"),

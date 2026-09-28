@@ -3,6 +3,7 @@ from .. import tool_cache
 from .. import ui
 from ..config import resolve_project_path
 from .approvals import check as _approval_check
+from .approvals import check_persistent as _persistent_check
 from .approvals import remember as _approval_remember
 from .approvals import repeat_denial as _repeat_denial
 from .approvals import sha_key
@@ -74,18 +75,29 @@ def apply_edits(edits):
     if not changed:
         return "Applied nothing: edits match existing content."
     key = sha_key("apply_edits", edits)
-    prior = _approval_check(key)
+    try:
+        persistent = _persistent_check("apply_edits")
+    except Exception:
+        persistent = "ask"
+    if persistent == "deny":
+        return _repeat_denial("Edits cancelled by user")
     files = len(changed)
     total = len(edits)
-    if prior is False:
-        return _repeat_denial("Edits cancelled by user")
-    if prior is None:
+    if persistent == "always":
         for _, plan in changed:
             ui.show_diff(safety.diff_text(plan["display"], plan["original"], plan["working"]))
-        approved = ui.confirm(f"Apply {total} edits across {files} files?")
-        _approval_remember(key, approved)
-        if not approved:
-            return "Edits cancelled by user"
+        _approval_remember(key, True)
+    else:
+        prior = _approval_check(key)
+        if prior is False:
+            return _repeat_denial("Edits cancelled by user")
+        if prior is None:
+            for _, plan in changed:
+                ui.show_diff(safety.diff_text(plan["display"], plan["original"], plan["working"]))
+            approved = ui.confirm(f"Apply {total} edits across {files} files?")
+            _approval_remember(key, approved)
+            if not approved:
+                return "Edits cancelled by user"
     try:
         for _, plan in changed:
             safety.checkpoint(plan["resolved"], plan["working"])

@@ -13,7 +13,7 @@
   <a href="https://github.com/mukundzha/hazzel/actions/workflows/ci.yml"><img src="https://github.com/mukundzha/hazzel/actions/workflows/ci.yml/badge.svg" alt="CI"></a>&nbsp;
   <a href="https://pypi.org/project/hazzel/"><img src="https://img.shields.io/pypi/v/hazzel?cacheSeconds=3600" alt="PyPI"></a>&nbsp;
   <a href="https://pypistats.org/packages/hazzel"><img src="https://img.shields.io/badge/downloads-4.3k%2Fmonth-blue" alt="Downloads"></a>&nbsp;
-  <a href="https://github.com/mukundzha/hazzel/actions/workflows/ci.yml"><img src="https://img.shields.io/badge/tests-407%20passing-brightgreen" alt="Tests"></a>&nbsp;
+  <a href="https://github.com/mukundzha/hazzel/actions/workflows/ci.yml"><img src="https://img.shields.io/badge/tests-420%20passing-brightgreen" alt="Tests"></a>&nbsp;
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-green" alt="License"></a>&nbsp;
   <a href="https://github.com/mukundzha/hazzel/stargazers"><img src="https://img.shields.io/github/stars/mukundzha/hazzel?style=social" alt="Stars"></a>
 </p>
@@ -130,7 +130,7 @@ Switch anytime with `/model`. Nothing is metered by Hazzel — you pay your prov
 
 | Group      | Commands                                                                              |
 | ---------- | ------------------------------------------------------------------------------------- |
-| Modes      | `/model` · `/plan on\|off` · `/think on\|off` · `/goal [@objective]`                   |
+| Modes      | `/model` · `/plan on\|off` · `/think on\|off` · `/goal [@objective]` · `/allow`        |
 | Git        | `/status` · `/diff [--staged]` · `/review [--staged]` · `/commit` · `/log`             |
 | Cost       | `/usage [today\|week\|month\|--by-model]` · `/budget`                                  |
 | Extend     | `/mcp [server [tool]]` · `/skills [name]` · `/init`                                   |

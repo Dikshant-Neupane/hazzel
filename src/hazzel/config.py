@@ -104,6 +104,10 @@ _goal = None
 _budget = {"session_usd": None, "daily_usd": None, "warn_at_pct": 80}
 _custom_pricing = {}
 _usage_retain_days = 90
+_allow_rules: dict[str, str] = {}
+
+ALLOW_TOOLS = frozenset({"run_command", "write_file", "edit_file", "apply_edits", "git_commit"})
+ALLOW_MODES = frozenset({"always", "ask", "deny"})
 
 MODEL = _model
 
@@ -132,7 +136,7 @@ def _get_config_file():
 
 
 def _load_config():
-    global _model, _provider, _display_name, MODEL, _plan_enabled, _think_enabled, _goal, _budget, _custom_pricing, _usage_retain_days
+    global _model, _provider, _display_name, MODEL, _plan_enabled, _think_enabled, _goal, _budget, _custom_pricing, _usage_retain_days, _allow_rules
     path = _get_config_file()
     if not path.exists():
         return
@@ -208,6 +212,17 @@ def _load_config():
     retain = data.get("usage_retain_days")
     if isinstance(retain, int) and retain > 0:
         _usage_retain_days = min(retain, 3650)
+    allow = data.get("allow")
+    if isinstance(allow, dict):
+        cleaned = {}
+        for tool, mode in allow.items():
+            t = str(tool or "").strip().lower()
+            m = str(mode or "").strip().lower()
+            if (t in ALLOW_TOOLS or t == "all") and m in ("always", "deny"):
+                cleaned[t] = m
+        _allow_rules = cleaned
+    elif allow is None:
+        _allow_rules = {}
 
 
 def _clean_budget_value(value):
@@ -234,7 +249,7 @@ def _save_config():
         os.chmod(CONFIG_FILE.parent, 0o700)
     except OSError:
         pass
-    data = {"keys": dict(_api_keys), "provider": _provider, "model": _model, "display_name": _display_name, "plan_enabled": _plan_enabled, "think_enabled": _think_enabled, "goal": _goal, "budget": dict(_budget), "custom_pricing": {p: dict(m) for p, m in _custom_pricing.items()}, "usage_retain_days": _usage_retain_days}
+    data = {"keys": dict(_api_keys), "provider": _provider, "model": _model, "display_name": _display_name, "plan_enabled": _plan_enabled, "think_enabled": _think_enabled, "goal": _goal, "budget": dict(_budget), "custom_pricing": {p: dict(m) for p, m in _custom_pricing.items()}, "usage_retain_days": _usage_retain_days, "allow": dict(_allow_rules)}
     tmp = None
     try:
         fd, tmp_path = tempfile.mkstemp(dir=str(CONFIG_FILE.parent))
@@ -407,6 +422,57 @@ def set_custom_pricing(provider, model, rates):
 
 def get_usage_retain_days():
     return _usage_retain_days
+
+
+def get_allow_rules():
+    return dict(_allow_rules)
+
+
+def get_allow(tool):
+    tool = str(tool or "").strip().lower()
+    if tool in _allow_rules:
+        return _allow_rules[tool]
+    if "all" in _allow_rules:
+        return _allow_rules["all"]
+    return "ask"
+
+
+def is_allow_all():
+    return _allow_rules.get("all") == "always"
+
+
+def set_allow(tool, mode):
+    tool = str(tool or "").strip().lower()
+    mode = str(mode or "").strip().lower()
+    if tool not in ALLOW_TOOLS and tool != "all":
+        return False
+    if mode in ("off", "clear", "ask", "reset", "default"):
+        if tool in _allow_rules:
+            del _allow_rules[tool]
+            try:
+                _save_config()
+            except OSError:
+                pass
+        return True
+    if mode not in ("always", "deny"):
+        return False
+    _allow_rules[tool] = mode
+    try:
+        _save_config()
+    except OSError:
+        pass
+    return True
+
+
+def clear_allow(tool=None):
+    if tool is None:
+        _allow_rules.clear()
+    else:
+        _allow_rules.pop(str(tool or "").strip().lower(), None)
+    try:
+        _save_config()
+    except OSError:
+        pass
 
 
 def get_goal():

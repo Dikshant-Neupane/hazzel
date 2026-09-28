@@ -54,3 +54,17 @@ def remember(key, approved):
 def repeat_denial(base_message):
     """Instant denial for a previously denied call — no second prompt."""
     return str(base_message) + _RETRY_NOTE
+
+
+def check_persistent(tool_name):
+    """Persistent /allow rule for a tool: 'always' / 'deny' / 'ask'.
+
+    Specific tool rule wins, then the global 'all' rule. Defaults to 'ask'.
+    Lazy config import keeps tools importable without a config cycle.
+    """
+    try:
+        from .. import config as _cfg
+
+        return _cfg.get_allow(tool_name)
+    except Exception:
+        return "ask"

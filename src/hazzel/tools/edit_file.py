@@ -3,6 +3,7 @@ from .. import tool_cache
 from .. import ui
 from ..config import resolve_project_path
 from .approvals import check as _approval_check
+from .approvals import check_persistent as _persistent_check
 from .approvals import remember as _approval_remember
 from .approvals import repeat_denial as _repeat_denial
 from .approvals import sha_key
@@ -40,15 +41,25 @@ def edit_file(path, old_text, new_text):
     updated = content.replace(old_text, new_text, 1)
 
     key = sha_key("edit_file", str(resolved), old_text or "", new_text or "")
-    prior = _approval_check(key)
-    if prior is False:
+    try:
+        persistent = _persistent_check("edit_file")
+    except Exception:
+        persistent = "ask"
+    if persistent == "deny":
         return _repeat_denial("Edit cancelled by user")
-    if prior is None:
+    if persistent == "always":
         ui.show_diff(safety.diff_text(path, content, updated))
-        approved = ui.confirm(f"Apply edit to {path}?")
-        _approval_remember(key, approved)
-        if not approved:
-            return "Edit cancelled by user"
+        _approval_remember(key, True)
+    else:
+        prior = _approval_check(key)
+        if prior is False:
+            return _repeat_denial("Edit cancelled by user")
+        if prior is None:
+            ui.show_diff(safety.diff_text(path, content, updated))
+            approved = ui.confirm(f"Apply edit to {path}?")
+            _approval_remember(key, approved)
+            if not approved:
+                return "Edit cancelled by user"
 
     safety.checkpoint(resolved, updated)
     resolved.write_text(updated)

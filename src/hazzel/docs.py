@@ -53,6 +53,7 @@ SECTIONS: list[tuple[str, list[str]]] = [
             "Edits show a diff first. Shell commands ask first (read-only ones like ls and git status skip the queue).",
             "Destructive git (reset --hard, --force) stays blocked — use the git tools.",
             "Everything runs inside your project root. /undo reverts agent edits, keeps yours.",
+            "/allow skips all prompts (allow-all, diffs still shown). /allow <tool> always|ask|deny for one tool, /allow clear to ask again.",
         ],
     ),
     (

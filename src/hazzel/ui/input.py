@@ -74,6 +74,7 @@ SLASH_COMMANDS = [
     {"name": "/retry", "desc": "re-run last message"},
     {"name": "/jobs", "desc": "background jobs list/poll/wait/kill/clear"},
     {"name": "/usage", "desc": "show token usage"},
+    {"name": "/allow", "desc": "allow-all, no prompts · per-tool always/ask/deny"},
     {"name": "/undo", "desc": "undo last change, keeps your edits [preview]"},
     {"name": "/redo", "desc": "reapply undone change [preview]"},
     {"name": "/logout", "desc": "clear saved API keys"},

@@ -1,7 +1,16 @@
+import pytest
+
 from hazzel import config as _config
 from hazzel.tools import approvals as appr
 from hazzel.tools import run_command as rc
 from hazzel.tools import write_file as wf
+
+
+@pytest.fixture(autouse=True)
+def _force_ask(monkeypatch):
+    # Persistent /allow rules live in the real user config file; force the
+    # default so a local `allow all=always` can't silence prompts here.
+    monkeypatch.setattr(_config, "get_allow", lambda tool: "ask")
 
 
 def _calls(monkeypatch):

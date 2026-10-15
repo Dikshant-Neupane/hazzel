@@ -4,6 +4,8 @@ All notable changes to Hazzel are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
+
+## [1.6.1] - 2026-10-15
 ### Added
 - `/allow` permissions: bare `/allow` turns on allow-all (no prompts, diffs still shown); `/allow <tool> always|ask|deny` sets a per-tool rule (`run_command`, `write_file`, `edit_file`, `apply_edits`, `git_commit`), `/allow list` shows rules, `/allow clear` goes back to asking. Persisted in `config.json`, survives restarts; plan-mode and `hazzel -p` read-only blocks still win, safe commands still skip.
 - `glob` tool: find files by path pattern (`**/*.py`, `src/**/test_*.py`, `**/*.{json,toml}`) with `*`/`**`/`?`/`[a-z]`/`{a,b}` support. Read-only, plan-mode safe, parallel-safe, TTL-cached and invalidated by file writes. Results are project-relative with `/` separators, capped at 100 matches, and a trailing `/` in the pattern matches directories only. Fills the gap where `list_files` was single-level and `search_files` only greps contents.
@@ -16,6 +18,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `jobs(action=wait)` longer than 15s no longer joins a parallel batch — a 120s wait inside a 60s budget reported a bogus timeout for every sibling tool.
 - The in-turn token budget now also distills assistant `tool_calls` arguments. Only `role: tool` results were shrunk, so an 8k `write_file` body or a 10-edit `apply_edits` list accumulated unbounded and was re-sent on every later iteration of the same turn.
 - The explore-then-act nudge fires once per read-only spiral instead of once per turn, so a second spiral gets corrected too rather than running to the iteration cap.
+- Approval tests no longer read the real user config: a local `/allow ... always` rule used to silence prompts under test and fail 6 tests. The suite now forces the `ask` default.
 
 ### Changed
 - License switched from `AGPL-3.0-or-later` to `Apache-2.0` for enterprise adoption (patent grant, procurement-friendly). Requires consent from prior AGPL contributors before release — do not publish a release until each contributor has agreed.
@@ -23,7 +26,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `concurrent.futures` is imported only when a parallel batch actually runs.
 - Tool schema trimmed (5937 → 5652 bytes; 2283 → 2212 tokens per request) by cutting prose from the five longest descriptions.
 - `list_files` overflow hint now points at `glob` as well as `search_files`.
-- README test badge corrected to the real count (319 → 407).
+- Skill body cap raised (`MAX_SKILL_CHARS` 12000 → 13000) for longer `SKILL.md` files.
+- README test badge corrected to the real count (319 → 420).
 
 ## [1.6.0] - 2026-09-25
 ### Added

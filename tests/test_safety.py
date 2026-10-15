@@ -112,6 +112,7 @@ def test_destructive_targets_checkpoint_rm_mv_cp(monkeypatch):
 
 
 def test_run_command_cancelled(monkeypatch):
+    monkeypatch.setattr(config, "get_allow", lambda tool: "ask")
     monkeypatch.setattr(rc.ui, "confirm", lambda *a, **k: False)
     out = rc.run_command("rm -rf important_stuff_xyz")
     assert out == "Command cancelled by user"

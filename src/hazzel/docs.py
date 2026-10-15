@@ -6,7 +6,7 @@ SECTIONS: list[tuple[str, list[str]]] = [
         [
             "pip install hazzel, cd into your project, run hazzel.",
             "Run /model, pick a provider, paste your key. Done — Hazzel remembers it.",
-            "No key yet? Set one via env (OPENAI_API_KEY, GROQ_API_KEY, …) or use Ollama locally with no key.",
+            "No key yet? Set one via env (OPENAI_API_KEY, GROQ_API_KEY, ANTHROPIC_API_KEY …) or use Ollama locally with no key.",
         ],
     ),
     (

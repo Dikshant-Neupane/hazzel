@@ -54,7 +54,7 @@ _EXPORTS = {
 
     "_HELP_FOOT": "help_docs", "_HELP_INTRO": "help_docs", "_HELP_SECTIONS": "help_docs",
     "_STAR_LINE": "help_docs", "_doc_line": "help_docs", "_help_table": "help_docs",
-    "_print_help_inline": "help_docs", "_show_help_tab": "help_docs",
+    "_print_help_inline": "help_docs", "_show_help_tab": "help_docs", "_star_line": "help_docs",
     "show_docs": "help_docs", "show_help": "help_docs",
 
     "_format_elapsed": "messages", "_format_result_preview": "messages",
@@ -64,7 +64,7 @@ _EXPORTS = {
     "format_context_plain": "messages", "prompt_goal_criteria": "messages",
     "show_cleared": "messages", "show_copied": "messages", "show_error": "messages",
     "show_export": "messages", "show_hazzel_message": "messages", "show_history": "messages",
-    "show_model_selected": "messages", "show_reasoning": "messages", "show_summary": "messages",
+    "show_model_selected": "messages",     "show_reasoning": "messages", "show_star_ask": "messages", "show_summary": "messages",
     "show_tool": "messages", "show_undo": "messages", "show_redo": "messages",
     "show_undo_preview": "messages", "show_user_command": "messages",
 
@@ -200,6 +200,7 @@ __all__ = [
     "prompt_goal_criteria",
     "show_model_selected",
     "show_cleared",
+    "show_star_ask",
     "show_help",
     "show_docs",
     "show_usage",

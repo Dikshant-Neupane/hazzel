@@ -1,0 +1,90 @@
+name: Release
+
+# Publishing is tag-triggered so `git tag v1.6.2 && git push --tags` is the
+# whole release. That matters more than it sounds: releases used to be cut by
+# hand, which is why 30 of them landed in five weeks and the Releases tab read
+# as churn. Automating the boring half is what makes a slower, weekly cadence
+# sustainable.
+#
+# Deliberately first-party actions only (checkout, setup-python) plus twine,
+# which is already in the dev extra. That matches the project's supply-chain
+# posture: no new third-party bytes in CI for a job that runs on your own tag.
+#
+# One-time setup:
+#   1. PyPI -> mukundzha -> Publishing -> API tokens -> Create token
+#      (scope: this project only)
+#   2. repo -> Settings -> Secrets -> Actions -> PYPI_API_TOKEN
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build and verify, but do not upload to PyPI"
+        type: boolean
+        default: true
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install build tooling
+        run: pip install -e ".[dev]"
+
+      # A tag that disagrees with the source is how you end up with 40 PyPI
+      # versions and a tag that lies. Fail before uploading, not after.
+      - name: Verify tag matches source version
+        if: ${{ github.event_name == 'push' }}
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          python - <<'PY'
+          import os, pathlib, re, sys
+
+          tag = os.environ.get("TAG", "").removeprefix("v")
+          text = pathlib.Path("src/hazzel/__init__.py").read_text()
+          found = re.search(r'__version__\s*=\s*"([^"]+)"', text)
+          version = found.group(1) if found else None
+          print(f"tag={tag} source={version}")
+          if not version or tag != version:
+              print(f"::error::tag {tag} does not match "
+                    f"src/hazzel/__init__.py version {version}")
+              sys.exit(1)
+          PY
+
+      - name: Run the test suite
+        run: pytest -q
+
+      - name: Build distributions
+        run: |
+          rm -rf dist build
+          python -m build
+
+      - name: Verify metadata
+        run: twine check --strict dist/*
+
+      - name: Upload to PyPI
+        if: ${{ github.event_name == 'push' || !inputs.dry_run }}
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: twine upload --non-interactive dist/*
+
+      - name: Upload skipped (dry run)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        run: echo "dry run — built and verified, nothing uploaded"

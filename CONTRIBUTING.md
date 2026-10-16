@@ -34,6 +34,28 @@ First-time contributors: your first CI run waits for a maintainer's approval bef
 starts — that's a standard GitHub guard for forks, not a rejection. After your first
 merged PR it runs automatically.
 
+## Releasing
+
+Releases are cut by tagging, and `.github/workflows/release.yml` does the rest —
+build, test, `twine check --strict`, publish to PyPI.
+
+```bash
+# 1. bump __version__ in src/hazzel/__init__.py, add the CHANGELOG heading
+# 2. tag and push — the workflow refuses to publish if the tag and the
+#    source version disagree
+git tag v1.6.2 && git push origin v1.6.2
+gh release create v1.6.2 --title "v1.6.2: ..." --notes-file notes.md
+```
+
+**Batch, and keep it to roughly weekly.** This repo shipped 30 releases in five
+weeks early on, and the Releases tab is the first thing a visitor reads to judge
+whether a project is maintained or churning. Neither is a judgement anyone
+should have to make from thirty tags of shim removals and dead-stub deletions.
+
+So: one release a week, batched, and every note should say what a *user* can now
+do that they couldn't before. Internal cleanup rides along inside a release that
+has a user-facing reason to exist; it does not get a release of its own.
+
 ## Reporting bugs
 
 Open an [issue](https://github.com/mukundzha/hazzel/issues) with:

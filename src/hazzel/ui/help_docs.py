@@ -6,7 +6,7 @@ import sys
 from rich.text import Text
 
 from . import _state as _st
-from ._state import DIM_COLOR, USER_COLOR
+from ._state import DIM_COLOR, USER_COLOR, is_no_color
 from . import input as _ui_input
 
 _HELP_INTRO = (
@@ -58,6 +58,22 @@ _HELP_FOOT = "Models  ·  Groq · OpenAI · Mistral · Anthropic · Gemini · De
 
 
 _STAR_LINE = "If Hazzel helps, star us: github.com/mukundzha/hazzel"
+
+
+def _star_line():
+    """The /help sign-off, with the URL as a clickable OSC-8 link.
+
+    Falls back to plain dim text when NO_COLOR is set or the terminal cannot
+    carry a hyperlink — the URL still has to be readable and copyable.
+    """
+    from hazzel import star_ask
+
+    lead = _STAR_LINE.split("github.com")[0].rstrip()
+    if is_no_color():
+        return Text(f"  {_STAR_LINE}", style="dim")
+    return Text.from_markup(
+        f"[dim]  {lead}[/dim][link={star_ask.REPO_URL}]{star_ask.DISPLAY_URL}[/link]"
+    )
 
 
 def _help_table(rows):
@@ -138,7 +154,7 @@ def _print_help_inline():
         _st.console.print(_help_table(rows))
     _st.console.print()
     _st.console.print(Text(_HELP_FOOT, style="dim"))
-    _st.console.print(Text(f"  {_STAR_LINE}", style="dim"))
+    _st.console.print(_star_line())
     _st.console.print()
 
 

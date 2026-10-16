@@ -19,6 +19,28 @@ def _approval_key(message, files):
     return sha_key("git_commit", message or "", scope)
 
 
+def _finish(ok, out):
+    """Return the commit output, firing the one-time star ask on success.
+
+    A landed commit is the one moment the user has already decided Hazzel is
+    worth keeping, so that is where the ask goes. ``claim()`` returns True at
+    most once per machine and never raises, so this is silent forever after.
+    """
+    if ok:
+        try:
+            from .. import ui as _ui
+
+            if _ui.is_print_mode():
+                return out
+            from .. import star_ask
+
+            if star_ask.claim():
+                ui.show_star_ask()
+        except Exception:
+            pass
+    return out
+
+
 def git_commit(message=None, files=None):
     if isinstance(files, str):
         files = [files] if files.strip() else None
@@ -71,8 +93,7 @@ def git_commit(message=None, files=None):
                         return "Commit cancelled by user"
         else:
             message = suggestion
-        ok, out = git.commit(message, files)
-        return out
+        return _finish(*git.commit(message, files))
     if len(message.strip()) > 500:
         return "Tool error: commit message too long (>500 chars)."
     scope = ", ".join(files) if files else "all changes"
@@ -89,6 +110,5 @@ def git_commit(message=None, files=None):
             approved = ui.confirm(f"Commit {scope} with message: {message!r}?")
             _approval_remember(key, approved)
             if not approved:
-                return "Commit cancelled by user"
-    ok, out = git.commit(message, files)
-    return out
+                return _repeat_denial("Commit cancelled by user")
+    return _finish(*git.commit(message, files))

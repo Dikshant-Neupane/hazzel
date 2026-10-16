@@ -415,3 +415,27 @@ def show_export(path):
     line.append(str(path), style="white")
     _st.console.print(line)
     _st.console.print()
+
+
+def show_star_ask(prefix="  "):
+    """One-time star ask, rendered as a real OSC-8 hyperlink when supported.
+
+    Called only after the first successful commit (see ``hazzel.star_ask``).
+    Falls back to a plain dim URL when the terminal cannot carry a link, so
+    the line is always readable and always copyable.
+    """
+    from hazzel import star_ask
+
+    if is_no_color():
+        _st.console.print()
+        _st.console.print(Text(f"{prefix}{star_ask.message()}", style="dim"))
+        _st.console.print()
+        return
+
+    _st.console.print()
+    _st.console.print(
+        f"[dim]{prefix}Committed. If Hazzel just earned its keep in your terminal, "
+        f"a star helps the next person find it — [/dim]"
+        f"[link={star_ask.REPO_URL}]{star_ask.DISPLAY_URL}[/link]"
+    )
+    _st.console.print()

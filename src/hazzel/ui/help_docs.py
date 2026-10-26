@@ -29,6 +29,7 @@ _HELP_SECTIONS = [
         ("/help", "this overview"),
         ("/docs", "full usage guide"),
         ("/clear", "reset conversation + usage"),
+        ("/session", "save/list/restore named sessions [name]"),
         ("/summary", "summarize last implementation"),
         ("/export", "save transcript [file.md]"),
         ("/copy", "copy last reply [code]"),

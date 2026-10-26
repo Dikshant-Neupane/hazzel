@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from hazzel import session
 
 
@@ -110,3 +112,81 @@ def test_per_project_paths_differ(tmp_path):
     b = session.session_path(tmp_path / "proj-b")
     assert a != b
     assert a.parent == b.parent
+
+
+# --- named sessions ---
+
+
+def _msgs(tag):
+    return [
+        {"role": "system", "content": "sys"},
+        {"role": "user", "content": f"hello {tag}"},
+        {"role": "assistant", "content": f"hi {tag}"},
+    ]
+
+
+def test_named_round_trip(tmp_path, monkeypatch):
+    monkeypatch.setattr(session, "session_path", lambda root=None: tmp_path / "s.json")
+    assert session.save_named("Experiment", _msgs("a"), "sum-a", None, "hello a", "hi a")
+    path = tmp_path / "s-experiment.json"
+    assert path.exists()
+    assert path.stat().st_mode & 0o777 == 0o600
+    loaded = session.load_named("experiment")
+    assert loaded is not None
+    assert [m["role"] for m in loaded["messages"]] == ["user", "assistant"]
+    assert loaded["summary"] == "sum-a"
+
+
+def test_named_bad_names(tmp_path, monkeypatch):
+    monkeypatch.setattr(session, "session_path", lambda root=None: tmp_path / "s.json")
+    for bad in ["", "   ", "a/b", "a\\b", "..", "a..b", "x" * 41]:
+        with pytest.raises(ValueError):
+            session.save_named(bad, _msgs("x"))
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_named_name_normalized(tmp_path, monkeypatch):
+    monkeypatch.setattr(session, "session_path", lambda root=None: tmp_path / "s.json")
+    session.save_named("  My Experiment  ", _msgs("n"))
+    listed = session.list_named()
+    assert len(listed) == 1
+    assert listed[0]["name"] == "my experiment"
+    assert listed[0]["messages"] == 2
+    assert listed[0]["saved_at"] > 0
+
+
+def test_named_per_project_isolation(tmp_path, monkeypatch):
+    monkeypatch.setattr(session, "_session_dir", lambda: tmp_path)
+    root_a, root_b = tmp_path / "projA", tmp_path / "projB"
+    session.save_named("exp", _msgs("a"), root=root_a)
+    session.save_named("exp", _msgs("b"), root=root_b)
+    assert session.load_named("exp", root=root_a)["messages"][0]["content"] == "hello a"
+    assert session.load_named("exp", root=root_b)["messages"][0]["content"] == "hello b"
+    assert [e["name"] for e in session.list_named(root=root_a)] == ["exp"]
+    assert [e["name"] for e in session.list_named(root=root_b)] == ["exp"]
+
+
+def test_named_list_sorted_counts_and_skips(tmp_path, monkeypatch):
+    monkeypatch.setattr(session, "session_path", lambda root=None: tmp_path / "s.json")
+    session.save(_msgs("d"))
+    session.save_named("beta", _msgs("b"))
+    session.save_named("alpha", _msgs("a"))
+    (tmp_path / "s-broken.json").write_text("{not json")
+    listed = session.list_named()
+    assert [(e["name"], e["messages"]) for e in listed] == [("alpha", 2), ("beta", 2)]
+    assert all(e["saved_at"] > 0 for e in listed)
+
+
+def test_named_leaves_default_slot_alone(tmp_path, monkeypatch):
+    monkeypatch.setattr(session, "session_path", lambda root=None: tmp_path / "s.json")
+    session.save(_msgs("d"))
+    before = (tmp_path / "s.json").read_bytes()
+    session.save_named("exp", _msgs("n"))
+    assert (tmp_path / "s.json").read_bytes() == before
+    assert session.load()["messages"][0]["content"] == "hello d"
+    assert session.load_named("exp")["messages"][0]["content"] == "hello n"
+
+
+def test_named_missing_returns_none(tmp_path, monkeypatch):
+    monkeypatch.setattr(session, "session_path", lambda root=None: tmp_path / "s.json")
+    assert session.load_named("nope") is None

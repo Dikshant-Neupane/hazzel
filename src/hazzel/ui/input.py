@@ -64,7 +64,7 @@ SLASH_COMMANDS = [
     {"name": "/help", "desc": "show help"},
     {"name": "/docs", "desc": "full usage guide"},
     {"name": "/clear", "desc": "clear conversation + usage + saved session"},
-    {"name": "/session", "desc": "restore last saved session"},
+    {"name": "/session", "desc": "save/list/restore named sessions"},
     {"name": "/summary", "desc": "summarize last implementation"},
     {"name": "/export", "desc": "save transcript to markdown"},
     {"name": "/copy", "desc": "copy last reply [code]"},

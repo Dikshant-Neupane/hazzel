@@ -11,8 +11,10 @@ Config files (project wins on name clash):
 - ``~/.config/hazzel/mcp.json`` (``XDG_CONFIG_HOME`` aware)
 
 The agent sees a single ``mcp`` tool (skill-like): ``list`` discovers
-servers/tools read-only, ``call`` runs one remote tool. Processes spawn
-lazily on first use — never at startup — and are reaped on exit.
+servers/tools read-only, ``call`` runs one remote tool, and
+``list_resources`` / ``read_resource`` read a server's resources (also
+read-only). Processes spawn lazily on first use — never at startup — and
+are reaped on exit.
 """
 
 from __future__ import annotations
@@ -36,6 +38,7 @@ MIN_TIMEOUT = 1.0
 
 MAX_SERVERS = 32
 MAX_TOOLS_PER_SERVER = 64
+MAX_RESOURCES_PER_SERVER = 64
 MAX_CATALOG_TOOLS = 40
 MAX_DESC_CHARS = 100
 MAX_RESULT_CHARS = 5000
@@ -386,6 +389,90 @@ def list_server_tools(server_name):
     return list(tools), None
 
 
+def _clean_resources(result):
+    resources = []
+    items = []
+    if isinstance(result, dict):
+        items = result.get("resources", [])
+    if not isinstance(items, list):
+        return []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        uri = item.get("uri")
+        if not isinstance(uri, str) or not uri.strip():
+            continue
+        name = item.get("name", "")
+        if not isinstance(name, str):
+            name = ""
+        mime = item.get("mimeType", "")
+        if not isinstance(mime, str):
+            mime = ""
+        resources.append({"uri": uri, "name": name, "mimeType": mime})
+        if len(resources) >= MAX_RESOURCES_PER_SERVER:
+            break
+    return resources
+
+
+def _is_method_not_found(error):
+    return "method not found" in str(error).lower()
+
+
+def list_server_resources(server_name):
+    """(resources, error) for one server; spawns it on first use.
+
+    No pagination: the list is capped at MAX_RESOURCES_PER_SERVER.
+    """
+    spec = find_server(server_name)
+    if spec is None:
+        return None, f"MCP server not found: {server_name}."
+    conn = _conn(spec)
+    try:
+        result = conn.request("resources/list", {}, timeout=spec["timeout"])
+    except (TimeoutError, RuntimeError) as error:
+        if _is_method_not_found(error):
+            return None, f"MCP server `{spec['name']}` does not support resources (method not found)."
+        return None, f"MCP server `{spec['name']}` failed: {error}."
+    except Exception as error:
+        return None, f"MCP server `{spec['name']}` failed: {error}."
+    return _clean_resources(result), None
+
+
+def read_server_resource(server_name, uri):
+    """Text contents of one resource, size-capped, or a one-line error."""
+    spec = find_server(server_name)
+    if spec is None:
+        return f"MCP server not found: {server_name}."
+    if not isinstance(uri, str) or not uri.strip():
+        return "Invalid MCP resource URI: pass a uri."
+    conn = _conn(spec)
+    try:
+        result = conn.request("resources/read", {"uri": uri.strip()}, timeout=spec["timeout"])
+    except (TimeoutError, RuntimeError) as error:
+        if _is_method_not_found(error):
+            return f"MCP server `{spec['name']}` does not support resources (method not found)."
+        return f"Resource error: MCP `{spec['name']}` failed ({error})."
+    except Exception as error:
+        return f"Resource error: MCP `{spec['name']}` failed ({error})."
+    parts = []
+    if isinstance(result, dict) and isinstance(result.get("contents"), list):
+        for block in result["contents"]:
+            if not isinstance(block, dict):
+                continue
+            if isinstance(block.get("text"), str):
+                parts.append(block["text"])
+            elif isinstance(block.get("blob"), str):
+                parts.append(f"[binary content omitted: {block.get('uri', uri.strip())}]")
+    text = "\n".join(parts).strip() or "(empty resource)"
+    return _cap_result(text)
+
+
+def _cap_result(text):
+    if len(text) > MAX_RESULT_CHARS:
+        return text[: MAX_RESULT_CHARS - 700] + f"\n[…{len(text) - MAX_RESULT_CHARS} chars skipped…]\n" + text[-700:]
+    return text
+
+
 def _flatten_call_result(result):
     if isinstance(result, dict) and isinstance(result.get("content"), list):
         parts = []
@@ -429,8 +516,7 @@ def call_server_tool(server_name, tool_name, arguments=None):
     except Exception as error:
         return f"Tool error: MCP `{spec['name']}` failed ({error})."
     text, is_error = _flatten_call_result(result)
-    if len(text) > MAX_RESULT_CHARS:
-        text = text[: MAX_RESULT_CHARS - 700] + f"\n[…{len(text) - MAX_RESULT_CHARS} chars skipped…]\n" + text[-700:]
+    text = _cap_result(text)
     if is_error:
         return f"Tool error: MCP `{tool_name.strip()}` reported an error:\n{text}"
     return text or "(empty result)"
@@ -466,12 +552,37 @@ def list_all():
     return "\n".join(out)
 
 
-def mcp_tool(action="list", server="", tool="", arguments=None):
+def mcp_tool(action="list", server="", tool="", arguments=None, uri=""):
     act = (action or "list").strip().lower()
     if act in ("servers", "ls", "tools"):
         act = "list"
-    if act not in ("list", "call"):
-        return "Usage: mcp(action=list|call, server=<name>, tool=<name>, arguments={}). List first, then call."
+    if act not in ("list", "call", "list_resources", "read_resource"):
+        return "Usage: mcp(action=list|call|list_resources|read_resource, server=<name>, tool=<name>, arguments={}, uri=<uri>). List first, then call."
+    if act == "list_resources":
+        if not (server or "").strip():
+            return "Usage: mcp(action=list_resources, server=<name>)."
+        spec = find_server(server)
+        if spec is None:
+            close = [s["name"] for s in discover_servers() if server.strip().lower() in s["name"].lower()]
+            hint = f" Did you mean: {', '.join(close[:3])}?" if close else ""
+            return f"MCP server not found: {server.strip()}.{hint}"
+        resources, error = list_server_resources(spec["name"])
+        if error is not None:
+            return error
+        if not resources:
+            return f"MCP server `{spec['name']}`: no resources."
+        rows = [f"MCP `{spec['name']}` resources ({len(resources)}):"]
+        for r in resources:
+            name = f"{r['name']} " if r["name"] else ""
+            mime = f" ({r['mimeType']})" if r["mimeType"] else ""
+            rows.append(f"- {name}{r['uri']}{mime}")
+        return "\n".join(rows)
+    if act == "read_resource":
+        if not (server or "").strip():
+            return "Usage: mcp(action=read_resource, server=<name>, uri=<uri>)."
+        if not (uri or "").strip():
+            return "Usage: mcp(action=read_resource, server=<name>, uri=<uri>)."
+        return read_server_resource(server.strip(), uri.strip())
     if act == "list":
         if (server or "").strip():
             spec = find_server(server)

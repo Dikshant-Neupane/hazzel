@@ -8,6 +8,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 - `hazzel -p --output-format json` now emits one JSON error object for missing keys, turn failures, connection failures and cancellations, preserving exit codes and stderr diagnostics. (#34)
 ### Added
+- MCP resources: `mcp(action=list_resources, server=<name>)` lists a server's resources (name, URI, MIME type, capped) and `mcp(action=read_resource, server=<name>, uri=<uri>)` reads one resource's text (size-capped, text/blob blocks handled). Stdio only; servers without resource support get a clear method-not-found message. (#31)
 - `hazzel --list-models` prints the built-in model catalog, one line per model (provider, model id, display name, context window), marking the configured model with `*`. Exits 0 with no API key, config write, or network access. (#35)
 - Named sessions: `/session save <name>` snapshots the current conversation, `/session list` shows saved sessions for this project (name, saved time, message count), and `/session restore <name>` loads one. Bare `/session restore` still reloads the last saved session, and `/clear` is unchanged. (#32)
 - `/version` in-session command: prints Hazzel version, Python version, current provider/model, and config file path, then returns to the prompt. No network, no API key, no config writes. (#36)

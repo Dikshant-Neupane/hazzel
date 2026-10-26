@@ -547,7 +547,10 @@ def run_tool(tool_name, arguments):
             call_args = arguments.get("arguments", {})
             if not isinstance(call_args, dict):
                 call_args = {}
-            return _mcp.mcp_tool(action, server, tool, call_args)
+            uri = arguments.get("uri", "")
+            if not isinstance(uri, str):
+                uri = ""
+            return _mcp.mcp_tool(action, server, tool, call_args, uri)
         return f"Unknown tool: {tool_name}. Valid tools: {', '.join(sorted(TOOL_NAMES))}."
     except KeyboardInterrupt:
         raise

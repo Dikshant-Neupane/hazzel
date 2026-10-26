@@ -13,7 +13,7 @@
   <a href="https://github.com/mukundzha/hazzel/actions/workflows/ci.yml"><img src="https://github.com/mukundzha/hazzel/actions/workflows/ci.yml/badge.svg" alt="CI"></a>&nbsp;
   <a href="https://pypi.org/project/hazzel/"><img src="https://img.shields.io/pypi/v/hazzel?cacheSeconds=3600" alt="PyPI"></a>&nbsp;
   <a href="https://pypistats.org/packages/hazzel"><img src="https://img.shields.io/pypi/dm/hazzel" alt="Downloads"></a>&nbsp;
-  <a href="https://github.com/mukundzha/hazzel/actions/workflows/ci.yml"><img src="https://img.shields.io/badge/tests-420%20passing-brightgreen" alt="Tests"></a>&nbsp;
+  <a href="https://github.com/mukundzha/hazzel/actions/workflows/ci.yml"><img src="https://img.shields.io/badge/tests-453%20passing-brightgreen" alt="Tests"></a>&nbsp;
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-green" alt="License"></a>&nbsp;
   <a href="https://github.com/mukundzha/hazzel/stargazers"><img src="https://img.shields.io/github/stars/mukundzha/hazzel?style=social" alt="Stars"></a>
 </p>
@@ -24,7 +24,7 @@
 
 > First external PR merged in v1.5.1 — [good first issues are open](https://github.com/mukundzha/hazzel/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
 
-**Recently shipped:** `/allow` per-tool permissions + `glob` path lookup — fewer prompts, fewer model calls (1.6.1) · selective undo — `/undo` keeps your edits, `/redo` reapplies (1.6.0) · compat shim removal — `panels.py` gone, same imports (1.5.7) · dead UI stub removal — smaller surface, same terminal (1.5.6) · background jobs `wait`/`clear` — block until done, drop finished (1.5.5) · ask-once approvals — one y/N ends it, never asked twice (1.5.4) · `NO_COLOR` support — piped logs stay plain (#12, @DYNOSuprovo) · v1.5.3 SEO landing page · confirmation prompts accept `yes` — first external contribution (@Gambit-Checkmate, 1.5.1) · `/review` (1.5.0) — [full changelog](CHANGELOG.md)
+**Recently shipped:** `HAZZEL_CODE_THEME` code-block themes + `HAZZEL_NO_UPDATE_CHECK` startup opt-out (1.6.2) · `/allow` per-tool permissions + `glob` path lookup — fewer prompts, fewer model calls (1.6.1) · selective undo — `/undo` keeps your edits, `/redo` reapplies (1.6.0) · compat shim removal — `panels.py` gone, same imports (1.5.7) · dead UI stub removal — smaller surface, same terminal (1.5.6) · background jobs `wait`/`clear` — block until done, drop finished (1.5.5) · ask-once approvals — one y/N ends it, never asked twice (1.5.4) · `NO_COLOR` support — piped logs stay plain (#12, @DYNOSuprovo) · v1.5.3 SEO landing page · confirmation prompts accept `yes` — first external contribution (@Gambit-Checkmate, 1.5.1) · `/review` (1.5.0) — [full changelog](CHANGELOG.md)
 
 ## Try it in your project
 
@@ -142,7 +142,7 @@ Type `/` to filter live, `@` to attach a file, `/docs` to page the full guide wi
 
 ## What it's honest about not being
 
-v1.6.1, early-stage. No autonomous PRs, no cloud dashboard, no session sync across machines. It doesn't replace your editor — it sits in the terminal next to it, and it stays small on purpose.
+v1.6.2, early-stage. No autonomous PRs, no cloud dashboard, no session sync across machines. It doesn't replace your editor — it sits in the terminal next to it, and it stays small on purpose.
 
 If you need a heavier, more automated agent, better options exist. If you want to see exactly what's about to happen to your files before it happens, this is built for that.
 

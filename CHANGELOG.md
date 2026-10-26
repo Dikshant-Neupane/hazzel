@@ -4,9 +4,12 @@ All notable changes to Hazzel are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
+
+## [1.6.2] - 2026-10-26
 ### Added
-- `HAZZEL_NO_UPDATE_CHECK` disables the interactive startup PyPI version check without reading or writing its cache; unset or blank preserves the daily check. (#30)
 - `HAZZEL_CODE_THEME` picks the code-block theme (`HAZZEL_CODE_THEME=monokai hazzel`, or `ansi_light` for light terminals). Any installed Pygments style works. Unset, blank or unknown names keep `github-dark`, so a typo can't break rendering. (#4)
+- `HAZZEL_NO_UPDATE_CHECK` disables the interactive startup PyPI version check without reading or writing its cache; unset or blank preserves the daily check. (#30)
+- One-time star ask after the first successful commit: one dim line, once per machine, never in `hazzel -p`. Opt out with `HAZZEL_NO_STAR_NAG=1` (or `HAZZEL_NO_NAG=1`). The `/help` footer link is now clickable, with a plain-text fallback under `NO_COLOR`.
 
 ## [1.6.1] - 2026-10-15
 ### Added

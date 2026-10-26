@@ -51,7 +51,40 @@ def build_parser():
         help="print the reply as plain text (default) or a JSON object with response, model, and usage",
     )
     parser.add_argument("--version", "-V", dest="version", action="store_true", help="show the Hazzel version and exit")
+    parser.add_argument(
+        "--list-models",
+        dest="list_models",
+        action="store_true",
+        help="list the built-in model catalog and exit (no key, config, or network needed)",
+    )
     return parser
+
+
+def list_models():
+    """Print the built-in model catalog, one greppable line per entry.
+
+    Reads config.MODEL_CATALOG directly, never get_catalog(), so no local
+    Ollama probing, network access, API key, or config write happens. The
+    configured model is marked with "*" only when a config file exists.
+    """
+    from hazzel import config
+
+    try:
+        configured = config.CONFIG_FILE.exists()
+    except Exception:
+        configured = False
+    current = None
+    if configured:
+        try:
+            current = (config.get_current_provider(), config.get_current_model())
+        except Exception:
+            current = None
+    for entry in config.MODEL_CATALOG:
+        mark = "*" if current == (entry["provider"], entry["id"]) else " "
+        sys.stdout.write(
+            f"{mark} {entry['provider']} {entry['id']} "
+            f"{entry['display_name']} {entry['context']}\n"
+        )
 
 
 def read_piped_stdin(stdin=None):

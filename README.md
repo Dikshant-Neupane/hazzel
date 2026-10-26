@@ -105,7 +105,7 @@ Aider is excellent — this is about fit, not superiority.
 | Extends without lock-in | Minimal MCP stdio client — standard library only, any server via `.hazzel/mcp.json`. `SKILL.md` skills load on demand. Neither needs Hazzel-specific tooling to author. |
 | Shows you the bill | Provider-reported tokens parsed into real dollars, logged locally — not estimated. Live `tokens · $` line every turn; `/usage today\|week\|month --by-model`, `/budget`. |
 | Remembers between sessions | Per-project sessions persist with `/session restore`. `/plan on` explores read-only first; `/think on` buys extended reasoning for hard edits. |
-| Works in a pipeline | `hazzel -p "prompt"` runs one turn and exits — pipe a diff in, get a summary out. `--output-format json` + real exit codes for CI. |
+| Works in a pipeline | `hazzel -p "prompt"` runs one turn and exits — pipe a diff in, get a summary out. `--output-format json` + real exit codes for CI. `hazzel --list-models` prints the built-in model catalog (one line per model) and exits — no key, config, or network needed. |
 
 In `hazzel -p "prompt" --output-format json`, a successful turn emits
 `{"success": true, "response": "...", "model": "...", "usage": {...}}`.

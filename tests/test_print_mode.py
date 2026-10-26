@@ -18,6 +18,7 @@ from hazzel.print_mode import (
     EXIT_USAGE,
     build_parser,
     combine_prompt,
+    list_models,
     read_piped_stdin,
     run_print,
 )
@@ -353,3 +354,54 @@ def test_run_print_failure_payload(
     assert not ui.is_print_mode()
     assert not ui.is_quiet()
     assert not is_print_readonly()
+
+
+# --- --list-models ---
+
+
+_SMALL_CATALOG = [
+    {"provider": "groq", "id": "openai/gpt-oss-120b", "display_name": "GPT OSS 120B", "context": 131072},
+    {"provider": "ollama", "id": "qwen3:30b", "display_name": "Qwen3 30B", "context": 40960},
+]
+
+
+def test_parser_list_models():
+    args = build_parser().parse_args(["--list-models"])
+    assert args.list_models is True
+    args = build_parser().parse_args([])
+    assert args.list_models is False
+
+
+def test_list_models_one_line_per_entry_no_config(tmp_path, capsys, monkeypatch):
+    monkeypatch.setattr(config, "MODEL_CATALOG", _SMALL_CATALOG)
+    monkeypatch.setattr(config, "CONFIG_FILE", tmp_path / "no-config.json")
+    list_models()
+    lines = capsys.readouterr().out.splitlines()
+    assert lines == [
+        "  groq openai/gpt-oss-120b GPT OSS 120B 131072",
+        "  ollama qwen3:30b Qwen3 30B 40960",
+    ]
+
+
+def test_list_models_marks_current_only_when_configured(tmp_path, capsys, monkeypatch):
+    monkeypatch.setattr(config, "MODEL_CATALOG", _SMALL_CATALOG)
+    cfg = tmp_path / "config.json"
+    cfg.write_text("{}")
+    monkeypatch.setattr(config, "CONFIG_FILE", cfg)
+    monkeypatch.setattr(config, "_provider", "ollama")
+    monkeypatch.setattr(config, "_model", "qwen3:30b")
+    list_models()
+    lines = capsys.readouterr().out.splitlines()
+    assert lines == [
+        "  groq openai/gpt-oss-120b GPT OSS 120B 131072",
+        "* ollama qwen3:30b Qwen3 30B 40960",
+    ]
+
+
+def test_list_models_real_catalog_exactly_once(tmp_path, capsys, monkeypatch):
+    monkeypatch.setattr(config, "CONFIG_FILE", tmp_path / "no-config.json")
+    list_models()
+    lines = capsys.readouterr().out.splitlines()
+    assert len(lines) == len(config.MODEL_CATALOG)
+    ids = [line.split()[1] for line in lines]
+    assert sorted(ids) == sorted(entry["id"] for entry in config.MODEL_CATALOG)

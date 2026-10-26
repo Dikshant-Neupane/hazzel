@@ -93,6 +93,9 @@ def main(argv=None):
     if args.version:
         console.print(f"Hazzel {VERSION}")
         return
+    if args.list_models:
+        _print_mode.list_models()
+        return
     if args.prompt is not None:
         piped = _print_mode.read_piped_stdin()
         final = _print_mode.combine_prompt(args.prompt, piped)

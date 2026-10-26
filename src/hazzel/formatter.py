@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass
 
@@ -18,6 +19,30 @@ from rich import box
 # ---------------------------------------------------------------------------
 
 DEFAULT_CODE_THEME = "github-dark"
+CODE_THEME_ENV = "HAZZEL_CODE_THEME"
+
+
+def code_theme() -> str:
+    """Return the code-block theme: $HAZZEL_CODE_THEME if it names a known
+    Pygments style (or one of Rich's ansi_light / ansi_dark), otherwise
+    DEFAULT_CODE_THEME. Read on every call so the variable can change at
+    runtime, and validated so a typo can't break rendering."""
+    name = os.environ.get(CODE_THEME_ENV, "").strip()
+    if not name:
+        return DEFAULT_CODE_THEME
+
+    from pygments.styles import get_style_by_name
+    from pygments.util import ClassNotFound
+    from rich.syntax import RICH_SYNTAX_THEMES
+
+    if name in RICH_SYNTAX_THEMES:
+        return name
+    try:
+        get_style_by_name(name)
+    except ClassNotFound:
+        return DEFAULT_CODE_THEME
+    return name
+
 
 # ---------------------------------------------------------------------------
 # Color palette — one fixed role per color, no random application.
@@ -312,7 +337,7 @@ def render_code_block(
     syntax = Syntax(
         clean,
         language or "text",
-        theme=DEFAULT_CODE_THEME,
+        theme=code_theme(),
         line_numbers=dense,
         word_wrap=True,
         indent_guides=dense,

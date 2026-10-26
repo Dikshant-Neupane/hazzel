@@ -3,7 +3,10 @@
 from rich.table import Table
 
 from hazzel.formatter import (
+    DEFAULT_CODE_THEME,
+    code_theme,
     parse_blocks,
+    render_code_block,
     render_block,
     render_inline,
     render_table,
@@ -157,3 +160,48 @@ def test_code_block_text_language_still_parses():
     code_block = blocks[0].content
     assert code_block.language == ""
     assert code_block.code == "plain code"
+
+
+# ---------------------------------------------------------------------------
+# Code theme: HAZZEL_CODE_THEME, validated, falling back to github-dark
+# ---------------------------------------------------------------------------
+
+def _code_block_theme(code="x = 1", language="python"):
+    return render_code_block(code, language).renderable._theme
+
+
+def test_code_theme_defaults_when_unset(monkeypatch):
+    monkeypatch.delenv("HAZZEL_CODE_THEME", raising=False)
+    assert code_theme() == DEFAULT_CODE_THEME == "github-dark"
+
+
+def test_code_theme_honors_known_pygments_style(monkeypatch):
+    monkeypatch.setenv("HAZZEL_CODE_THEME", "monokai")
+    assert code_theme() == "monokai"
+
+
+def test_code_theme_accepts_rich_ansi_themes(monkeypatch):
+    monkeypatch.setenv("HAZZEL_CODE_THEME", "ansi_light")
+    assert code_theme() == "ansi_light"
+
+
+def test_code_theme_falls_back_on_unknown_or_blank(monkeypatch):
+    for value in ("not-a-real-style", "", "   "):
+        monkeypatch.setenv("HAZZEL_CODE_THEME", value)
+        assert code_theme() == DEFAULT_CODE_THEME
+
+
+def test_code_block_renders_with_env_theme(monkeypatch):
+    from rich.syntax import Syntax
+
+    monkeypatch.setenv("HAZZEL_CODE_THEME", "monokai")
+    themed = _code_block_theme()
+    monkeypatch.setenv("HAZZEL_CODE_THEME", "nope")
+    fallback = _code_block_theme()
+    monkeypatch.delenv("HAZZEL_CODE_THEME")
+    default = _code_block_theme()
+
+    assert themed.get_background_style() == Syntax.get_theme("monokai").get_background_style()
+    assert fallback.get_background_style() == default.get_background_style()
+    assert default.get_background_style() == Syntax.get_theme("github-dark").get_background_style()
+    assert themed.get_background_style() != default.get_background_style()

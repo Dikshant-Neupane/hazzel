@@ -83,21 +83,24 @@ def _clean_trace(trace):
     return cleaned
 
 
-def save(messages, summary=None, trace=None, user_input=None, response=None, root=None):
+def _build_data(messages, summary=None, trace=None, user_input=None, response=None):
     kept = []
     for msg in (messages or [])[1:]:
         cleaned = _clean_message(msg)
         if cleaned is not None:
             kept.append(cleaned)
     kept = kept[-MAX_MESSAGES:]
-    data = {
+    return {
         "messages": kept,
         "summary": _clean_text(summary or ""),
         "trace": _clean_trace(trace),
         "user_input": _clean_text(user_input or "", limit=4000),
         "response": _clean_text(response or ""),
     }
-    path = session_path(root)
+
+
+def _write_data(path, data):
+    """Atomically write JSON data to path with 0600 permissions."""
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         try:
@@ -124,6 +127,86 @@ def save(messages, summary=None, trace=None, user_input=None, response=None, roo
     except OSError:
         return False
     return True
+
+
+def save(messages, summary=None, trace=None, user_input=None, response=None, root=None):
+    return _write_data(
+        session_path(root),
+        _build_data(messages, summary, trace, user_input, response),
+    )
+
+
+MAX_SESSION_NAME = 40
+
+
+def sanitize_session_name(name):
+    """Normalize a named-session name, or raise ValueError with a clear reason.
+
+    Names are trimmed and lowercased. Overlong names are rejected rather than
+    truncated, since truncation could silently collide two different names.
+    """
+    if not isinstance(name, str):
+        raise ValueError("Session name must be text.")
+    cleaned = name.strip().lower()
+    if not cleaned:
+        raise ValueError("Session name must not be empty.")
+    if len(cleaned) > MAX_SESSION_NAME:
+        raise ValueError(f"Session name must be at most {MAX_SESSION_NAME} characters.")
+    if "/" in cleaned or "\\" in cleaned:
+        raise ValueError("Session name must not contain '/' or '\\'.")
+    if ".." in cleaned:
+        raise ValueError("Session name must not contain '..'.")
+    return cleaned
+
+
+def named_session_path(name, root=None):
+    """Path of a named snapshot: beside the default slot, same project digest."""
+    cleaned = sanitize_session_name(name)
+    path = session_path(root)
+    return path.with_name(f"{path.stem}-{cleaned}.json")
+
+
+def save_named(name, messages, summary=None, trace=None, user_input=None, response=None, root=None):
+    """Snapshot the current conversation under a name. Returns True on success."""
+    return _write_data(
+        named_session_path(name, root),
+        _build_data(messages, summary, trace, user_input, response),
+    )
+
+
+def load_named(name, root=None):
+    """Load a named snapshot, or None if it does not exist or is unreadable."""
+    return _read(named_session_path(name, root))
+
+
+def list_named(root=None):
+    """List restorable named snapshots for this project, sorted by name.
+
+    Each entry has the name, the file's saved time (epoch seconds), and the
+    restorable message count. Unreadable files are skipped: they cannot be
+    restored, so they are not sessions.
+    """
+    base = session_path(root)
+    prefix = base.stem + "-"
+    try:
+        children = list(base.parent.iterdir())
+    except OSError:
+        return []
+    entries = []
+    for path in children:
+        if not path.name.startswith(prefix) or path.suffix != ".json":
+            continue
+        name = path.name[len(prefix) : -len(".json")]
+        data = _read(path)
+        if data is None:
+            continue
+        try:
+            mtime = path.stat().st_mtime
+        except OSError:
+            mtime = 0.0
+        entries.append({"name": name, "saved_at": mtime, "messages": len(data["messages"])})
+    entries.sort(key=lambda entry: entry["name"])
+    return entries
 
 
 def backup_path(root=None):

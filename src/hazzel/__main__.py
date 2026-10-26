@@ -717,6 +717,69 @@ def main(argv=None):
         if low_in == "session" or low_in.startswith("/session"):
             raw = user_input.strip()
             arg = (raw[8:].strip() if raw.startswith("/") else raw[7:].strip()).lower()
+            parts = arg.split(None, 1)
+            action = parts[0] if parts else ""
+            name = parts[1] if len(parts) > 1 else ""
+            if action == "save":
+                if not name:
+                    ui.show_error("Usage: /session save <name> — snapshot the current conversation.")
+                    continue
+                try:
+                    cleaned = session.sanitize_session_name(name)
+                    ok = session.save_named(
+                        cleaned, messages, _last_summary, _last_trace, _last_user_input, _last_response
+                    )
+                except ValueError as error:
+                    ui.show_error(str(error))
+                    continue
+                if ok:
+                    console.print(f"  Session saved as '{cleaned}'.", style="dim")
+                else:
+                    ui.show_error("Could not save session.")
+                console.print()
+                continue
+            if action == "list":
+                import time
+
+                entries = session.list_named()
+                if not entries:
+                    console.print("  No named sessions saved for this project.", style="dim")
+                else:
+                    for entry in entries:
+                        when = time.strftime("%Y-%m-%d %H:%M", time.localtime(entry["saved_at"]))
+                        count = entry["messages"]
+                        console.print(
+                            f"  {entry['name']} · saved {when} · {count} message{'s' if count != 1 else ''}",
+                            style="dim",
+                        )
+                console.print()
+                continue
+            if action == "restore" and name:
+                try:
+                    cleaned = session.sanitize_session_name(name)
+                    previous = session.load_named(cleaned)
+                except ValueError as error:
+                    ui.show_error(str(error))
+                    continue
+                if not previous:
+                    ui.show_error(f"No saved session named '{cleaned}'.")
+                    continue
+                messages.clear()
+                messages.append({"role": "system", "content": agent.build_system_prompt(config.PROJECT_ROOT)})
+                agent.reset_conversation_state()
+                _apply_restored(previous)
+                _persist()
+                try:
+                    sys.stdout.write("\033[2J\033[3J\033[H")
+                    sys.stdout.flush()
+                except OSError:
+                    pass
+                ui.show_welcome(config.get_current_display_name(), config.PROJECT_ROOT)
+                try:
+                    ui.show_history(messages)
+                except Exception:
+                    pass
+                continue
             if arg in ("restore", "reload", "back"):
                 try:
                     previous = session.load_backup()
@@ -749,7 +812,7 @@ def main(argv=None):
                 except Exception:
                     pass
                 continue
-            console.print("  Usage: /session restore — reload the last saved session.", style="dim")
+            console.print("  Usage: /session save <name> | /session list | /session restore [name] — reload a snapshot (bare restore reloads the last saved session).", style="dim")
             console.print()
             continue
         _last_user_input = user_input

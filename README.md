@@ -164,8 +164,6 @@ If Hazzel is useful, the cheapest support costs nothing — use it, report what 
 <p align="center">
   <a href="https://github.com/mukundzha"><img src="https://avatars.githubusercontent.com/mukundzha?v=4&s=80" width="64" alt="mukundzha"/></a>
   &nbsp;&nbsp;
-  <a href="https://github.com/ronaldsterners"><img src="https://avatars.githubusercontent.com/ronaldsterners?v=4&s=80" width="64" alt="ronaldsterners"/></a>
-  &nbsp;&nbsp;
   <a href="https://github.com/Gambit-Checkmate"><img src="https://avatars.githubusercontent.com/Gambit-Checkmate?v=4&s=80" width="64" alt="Gambit-Checkmate"/></a>
   &nbsp;&nbsp;
   <a href="https://github.com/DYNOSuprovo"><img src="https://avatars.githubusercontent.com/DYNOSuprovo?v=4&s=80" width="64" alt="DYNOSuprovo"/></a>
@@ -175,6 +173,8 @@ If Hazzel is useful, the cheapest support costs nothing — use it, report what 
   <a href="https://github.com/binaryCoder-101"><img src="https://avatars.githubusercontent.com/binaryCoder-101?v=4&s=80" width="64" alt="binaryCoder-101"/></a>
   &nbsp;&nbsp;
   <a href="https://github.com/pollychen-lab"><img src="https://avatars.githubusercontent.com/pollychen-lab?v=4&s=80" width="64" alt="pollychen-lab"/></a>
+  &nbsp;&nbsp;
+  <a href="https://github.com/Muhtasim-Munif-Fahim"><img src="https://avatars.githubusercontent.com/Muhtasim-Munif-Fahim?v=4&s=80" width="64" alt="Muhtasim-Munif-Fahim"/></a>
 </p>
 
 <p align="center">

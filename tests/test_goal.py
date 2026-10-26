@@ -86,3 +86,5 @@ def test_prompt_goal_criteria(monkeypatch):
 
 def _raise_input(_prompt=""):
     raise EOFError
+
+

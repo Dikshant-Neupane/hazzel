@@ -177,6 +177,8 @@ If Hazzel is useful, the cheapest support costs nothing — use it, report what 
   <a href="https://github.com/pollychen-lab"><img src="https://avatars.githubusercontent.com/pollychen-lab?v=4&s=80" width="64" alt="pollychen-lab"/></a>
   &nbsp;&nbsp;
   <a href="https://github.com/Muhtasim-Munif-Fahim"><img src="https://avatars.githubusercontent.com/Muhtasim-Munif-Fahim?v=4&s=80" width="64" alt="Muhtasim-Munif-Fahim"/></a>
+  &nbsp;&nbsp;
+  <a href="https://github.com/dannyward630"><img src="https://avatars.githubusercontent.com/dannyward630?v=4&s=80" width="64" alt="dannyward630"/></a>
 </p>
 
 <p align="center">

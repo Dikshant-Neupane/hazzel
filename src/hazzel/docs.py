@@ -35,6 +35,7 @@ SECTIONS: list[tuple[str, list[str]]] = [
             "/export [file] — save transcript   /copy [code] — copy reply",
             "/init [file] — project map   /clear — reset chat   /logout — wipe keys   /exit — quit   /version — version + environment",
             "/mcp — list configured MCP servers/tools   /mcp <server> [<tool>] — inspect or run one",
+            "/mcp list_resources <server> — list a server's resources   /mcp read_resource <server> <uri> — read one resource's text",
             "MCP servers live in .hazzel/mcp.json ({\"mcpServers\": {\"name\": {\"command\": ..., \"args\": [...]}}}). Discovery is read-only; calls run third-party code.",
         ],
     ),

@@ -71,6 +71,29 @@ class FakeStdin:
                 ]}
             else:
                 result = {"content": [{"type": "text", "text": "hello from fake"}]}
+        elif method == "resources/list" and self._behavior != "no_resources":
+            result = {"resources": [
+                {"uri": "file:///notes.md", "name": "notes", "mimeType": "text/markdown"},
+                {"uri": "file:///data.json", "name": "data"},
+                {"name": "no-uri"},
+                {"uri": "file:///img.png", "name": "img", "mimeType": "image/png"},
+            ]}
+        elif method == "resources/read" and self._behavior != "no_resources":
+            uri = (req.get("params") or {}).get("uri")
+            if uri == "file:///missing.txt":
+                self._stdout.q.put(json.dumps({"jsonrpc": "2.0", "id": rid, "error": {"code": -32002, "message": "Unknown resource"}}) + "\n")
+                return
+            if uri == "file:///binary.bin":
+                result = {"contents": [{"uri": uri, "blob": "aGVsbG8="}]}
+            elif uri == "file:///multi.txt":
+                result = {"contents": [
+                    {"uri": uri, "mimeType": "text/plain", "text": "part one"},
+                    {"uri": uri, "mimeType": "text/plain", "text": "part two"},
+                ]}
+            elif uri == "file:///big.txt":
+                result = {"contents": [{"uri": uri, "mimeType": "text/plain", "text": "x" * 6000}]}
+            else:
+                result = {"contents": [{"uri": uri, "mimeType": "text/plain", "text": "hello resource"}]}
         else:
             self._stdout.q.put(json.dumps({"jsonrpc": "2.0", "id": rid, "error": {"code": -32601, "message": "Method not found"}}) + "\n")
             return
@@ -277,3 +300,78 @@ def test_prompt_needs_no_spawn(mcp_env, monkeypatch):
     monkeypatch.setattr(mcp_mod.subprocess, "Popen", _boom)
     prompt = mcp_mod.mcp_prompt()
     assert "demo" in prompt and "mcp(action=list)" in prompt
+
+
+# --- MCP resources ---
+
+
+def test_resources_list_ok(mcp_env):
+    proj, _ = mcp_env
+    _with_server(proj)
+    out = agent.run_tool("mcp", {"action": "list_resources", "server": "demo"})
+    assert "notes file:///notes.md (text/markdown)" in out
+    assert "data file:///data.json" in out
+    assert "no-uri" not in out  # entries without a URI are skipped
+    assert "img file:///img.png (image/png)" in out
+
+
+def test_resources_list_cap():
+    items = [{"uri": f"file:///{i}.txt", "name": str(i)} for i in range(70)]
+    assert len(mcp_mod._clean_resources({"resources": items})) == mcp_mod.MAX_RESOURCES_PER_SERVER
+
+
+def test_resource_read_text_blob_and_cap(mcp_env):
+    proj, _ = mcp_env
+    _with_server(proj)
+    assert "hello resource" in agent.run_tool(
+        "mcp", {"action": "read_resource", "server": "demo", "uri": "file:///notes.md"})
+    multi = agent.run_tool("mcp", {"action": "read_resource", "server": "demo", "uri": "file:///multi.txt"})
+    assert multi == "part one\npart two"
+    blob = agent.run_tool("mcp", {"action": "read_resource", "server": "demo", "uri": "file:///binary.bin"})
+    assert "binary content omitted" in blob
+    big = agent.run_tool("mcp", {"action": "read_resource", "server": "demo", "uri": "file:///big.txt"})
+    assert len(big) < 6000 and "chars skipped" in big
+
+
+def test_resource_read_unknown_uri(mcp_env):
+    proj, _ = mcp_env
+    _with_server(proj)
+    out = agent.run_tool("mcp", {"action": "read_resource", "server": "demo", "uri": "file:///missing.txt"})
+    assert out.startswith("Resource error: MCP") and "Unknown resource" in out
+
+
+def test_resources_method_not_found(mcp_env):
+    proj, _ = mcp_env
+    _with_server(proj)
+    FakePopen.behavior = "no_resources"
+    listed = agent.run_tool("mcp", {"action": "list_resources", "server": "demo"})
+    assert listed == "MCP server `demo` does not support resources (method not found)."
+    read = agent.run_tool("mcp", {"action": "read_resource", "server": "demo", "uri": "file:///notes.md"})
+    assert read == "MCP server `demo` does not support resources (method not found)."
+
+
+def test_resources_validation(mcp_env):
+    proj, _ = mcp_env
+    _with_server(proj)
+    assert agent.run_tool("mcp", {"action": "list_resources"}).startswith("Usage:")
+    assert agent.run_tool("mcp", {"action": "list_resources", "server": "nope_xyz"}).startswith("MCP server not found")
+    assert agent.run_tool("mcp", {"action": "read_resource", "server": "demo"}).startswith("Usage:")
+    assert agent.run_tool("mcp", {"action": "read_resource", "server": "nope_xyz", "uri": "file:///x"}).startswith("MCP server not found")
+
+
+def test_resources_plan_not_blocked(mcp_env, monkeypatch):
+    proj, _ = mcp_env
+    _with_server(proj)
+    monkeypatch.setattr(config, "is_plan_enabled", lambda: True)
+    assert "Blocked: plan mode" not in agent.run_tool("mcp", {"action": "list_resources", "server": "demo"})
+    assert "hello resource" in agent.run_tool(
+        "mcp", {"action": "read_resource", "server": "demo", "uri": "file:///notes.md"})
+    assert "Blocked: plan mode" in agent.run_tool(
+        "mcp", {"action": "call", "server": "demo", "tool": "read", "arguments": {}})
+
+
+def test_resources_tool_schema():
+    schema = next(t for t in agent.TOOLS if t["function"]["name"] == "mcp")
+    assert "uri" in schema["function"]["parameters"]["properties"]
+    assert "list_resources" in schema["function"]["description"]
+    assert "read_resource" in schema["function"]["description"]

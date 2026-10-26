@@ -5,6 +5,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- `/version` in-session command: prints Hazzel version, Python version, current provider/model, and config file path, then returns to the prompt. No network, no API key, no config writes. (#36)
+
 ## [1.6.2] - 2026-10-26
 ### Added
 - `HAZZEL_CODE_THEME` picks the code-block theme (`HAZZEL_CODE_THEME=monokai hazzel`, or `ansi_light` for light terminals). Any installed Pygments style works. Unset, blank or unknown names keep `github-dark`, so a typo can't break rendering. (#4)

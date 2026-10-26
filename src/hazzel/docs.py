@@ -7,6 +7,7 @@ SECTIONS: list[tuple[str, list[str]]] = [
             "pip install hazzel, cd into your project, run hazzel.",
             "Run /model, pick a provider, paste your key. Done — Hazzel remembers it.",
             "No key yet? Set one via env (OPENAI_API_KEY, GROQ_API_KEY, ANTHROPIC_API_KEY …) or use Ollama locally with no key.",
+            "On a light terminal, run HAZZEL_CODE_THEME=ansi_light hazzel for readable code colors (any Pygments style works; unknown values fall back to github-dark).",
         ],
     ),
     (

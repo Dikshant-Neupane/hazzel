@@ -136,6 +136,12 @@ Set `HAZZEL_NO_UPDATE_CHECK=1` to skip the interactive startup PyPI check withou
 
 Switch anytime with `/model`. Nothing is metered by Hazzel — you pay your provider directly, or nothing at all if you're running local.
 
+### Environment variables
+
+- `HAZZEL_CODE_THEME=monokai hazzel` — any installed Pygments style for code blocks.
+- `HAZZEL_CODE_THEME=ansi_light hazzel` — for light terminals.
+- Unset, blank, or unknown values fall back to `github-dark`.
+
 ## Commands at a glance
 
 | Group      | Commands                                                                              |

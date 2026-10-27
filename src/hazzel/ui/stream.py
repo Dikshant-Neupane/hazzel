@@ -8,7 +8,7 @@ from rich.text import Text
 from . import _state as _st
 
 
-def _live_body(text):
+def _live_body(text: str | None) -> Renderables:
     from rich.spinner import Spinner  # deferred: only needed when loader shows
 
     parts = []
@@ -21,12 +21,12 @@ def _live_body(text):
         parts.append(Text(""))
     return Renderables(parts)
 
-def begin_turn(text="Working…"):
+def begin_turn(text: str = "Working…") -> None:
     _st._tool_rows.clear()
     _st._turn_started = time.monotonic()
     show_loader(text)
 
-def show_loader(text="Working…"):
+def show_loader(text: str = "Working…") -> None:
     if _st._print_mode:
         return
     if _st._loader is not None:
@@ -45,7 +45,7 @@ def show_loader(text="Working…"):
     except OSError:
         pass
 
-def hide_loader():
+def hide_loader() -> None:
     if _st._loader is None:
         return
     try:
@@ -55,17 +55,17 @@ def hide_loader():
     finally:
         _st._loader = None
 
-def _pause_loader():
+def _pause_loader() -> bool:
     was_active = _st._loader is not None
     if was_active:
         hide_loader()
     return was_active
 
-def _resume_loader(was_active, text="Working…"):
+def _resume_loader(was_active: bool, text: str = "Working…") -> None:
     if was_active:
         show_loader(text)
 
-def begin_stream():
+def begin_stream() -> None:
     _st._stream_buffer = ""
     _st._stream_started = time.monotonic()
     _st._stream_first_at = None
@@ -75,7 +75,7 @@ def begin_stream():
     _st._thinking_streamed = False
     _st._thinking_was_live = False
 
-def push_reasoning_token(token):
+def push_reasoning_token(token: str) -> None:
     if not token:
         return
     _st._reason_buffer.append(token)
@@ -93,7 +93,7 @@ def push_reasoning_token(token):
     except OSError:
         pass
 
-def _live_reasoning(text):
+def _live_reasoning(text: str) -> Renderables:
     from rich.spinner import Spinner  # deferred: only needed when reasoning is live
 
     spinner = Spinner("dots", text=Text("thinking", style="dim italic"))
@@ -101,7 +101,7 @@ def _live_reasoning(text):
         return Renderables([spinner])
     return Renderables([spinner, Text(text, style="dim")])
 
-def _render_reasoning(text, limit=600):
+def _render_reasoning(text: str, limit: int = 600) -> str:
     text = text.strip()
     if not text:
         return ""
@@ -110,10 +110,10 @@ def _render_reasoning(text, limit=600):
         rendered = rendered[: limit - 1].rstrip() + "…"
     return rendered
 
-def was_thinking_streamed():
+def was_thinking_streamed() -> bool:
     return _st._thinking_was_live
 
-def push_stream_token(token):
+def push_stream_token(token: str) -> None:
     if not token:
         return
     now = time.monotonic()
@@ -141,7 +141,7 @@ def push_stream_token(token):
     except OSError:
         pass
 
-def stream_stats():
+def stream_stats() -> dict[str, float]:
     start = _st._stream_started or time.monotonic()
     first = _st._stream_first_at
     return {
@@ -150,28 +150,28 @@ def stream_stats():
         "elapsed": time.monotonic() - start,
     }
 
-def end_stream():
+def end_stream() -> str:
     buf = _st._stream_buffer
     _st._stream_buffer = ""
     return buf
 
-def end_turn():
+def end_turn() -> None:
     hide_loader()
 
-def set_quiet(value=True):
+def set_quiet(value: bool = True) -> bool:
     _st._quiet = bool(value)
     return _st._quiet
 
-def is_quiet():
+def is_quiet() -> bool:
     return _st._quiet
 
-def set_print_mode(value=True):
+def set_print_mode(value: bool = True) -> bool:
     _st._print_mode = bool(value)
     return _st._print_mode
 
-def is_print_mode():
+def is_print_mode() -> bool:
     return _st._print_mode
 
-def set_auto_approve(value=True):
+def set_auto_approve(value: bool = True) -> bool:
     _st._auto_approve = bool(value)
     return _st._auto_approve

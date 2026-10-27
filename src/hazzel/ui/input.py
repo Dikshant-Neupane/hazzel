@@ -4,6 +4,8 @@ import os
 import re
 import sys
 import time
+from pathlib import Path
+from typing import Any
 
 from rich.text import Text
 
@@ -11,12 +13,12 @@ from . import _state as _st
 from ._state import DIM_COLOR, HAZZEL_COLOR, is_no_color
 
 
-def show_welcome(model, project_root):
+def show_welcome(model: str, project_root: Path) -> None:
     _st.console.print()
     _show_header(model, project_root)
     _st.console.print()
 
-def _hw():
+def _hw() -> int:
     try:
         import shutil
 
@@ -28,15 +30,15 @@ def _hw():
     except Exception:
         return 80
 
-def rule():
+def rule() -> None:
     _st.console.print(Text("─" * _hw(), style="dim"))
 
-def _rule_ansi():
+def _rule_ansi() -> str:
     if is_no_color():
         return "─" * _hw()
     return "\x1b[2m" + ("─" * _hw()) + "\x1b[0m"
 
-def _show_header(display_name, project_root):
+def _show_header(display_name: str, project_root: Path) -> None:
     try:
         from importlib.metadata import version as _pkg_version
         _ver = _pkg_version("hazzel")
@@ -82,7 +84,7 @@ SLASH_COMMANDS = [
     {"name": "/exit", "desc": "leave Hazzel"},
 ]
 
-def _short_path(path):
+def _short_path(path: str | Path) -> str:
     try:
         from pathlib import Path
 
@@ -99,13 +101,13 @@ def _short_path(path):
 
 _ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[a-zA-Z]")
 
-def _visible_len(text):
+def _visible_len(text: str | None) -> int:
     try:
         return len(_ANSI_RE.sub("", text or ""))
     except Exception:
         return len(text or "")
 
-def _visual_rows(lines):
+def _visual_rows(lines: list[str] | None) -> int:
     try:
         width = max(20, _hw())
     except Exception:
@@ -125,7 +127,7 @@ _MENTION_EXTRA_SKIP = frozenset({"site", "dist", "build", ".venv"})
 _file_cache = {"root": None, "ts": 0.0, "files": []}
 _MAX_TOOL_ROWS = 8
 
-def _active_mention(buffer):
+def _active_mention(buffer: str | None) -> tuple[int, str] | None:
     match = _MENTION_TOKEN_RE.search(buffer or "")
     if not match:
         return None
@@ -139,7 +141,7 @@ def _active_mention(buffer):
         return None
     return (at, query or "")
 
-def _all_project_files():
+def _all_project_files() -> list[str]:
     from hazzel import config
 
     root = str(config.PROJECT_ROOT)
@@ -162,7 +164,7 @@ def _all_project_files():
     _file_cache.update({"root": root, "ts": now, "files": files})
     return files
 
-def _fuzzy_score(query, target):
+def _fuzzy_score(query: str, target: str) -> float | None:
     q = query.lower()
     t = target.lower()
     if not q or len(q) > 64:
@@ -191,7 +193,7 @@ def _fuzzy_score(query, target):
     score -= min(consec, 8) * 2.0
     return score
 
-def _skill_candidates(query, limit=4):
+def _skill_candidates(query: str | None, limit: int = 4) -> list[str]:
     try:
         from hazzel import skills as _skills
         names = [s["name"] for s in _skills.discover_skills()]
@@ -216,7 +218,7 @@ def _skill_candidates(query, limit=4):
     scored.sort(key=lambda item: (item[0], item[1], item[2].lower()))
     return [name for _, _, name in scored[:limit]]
 
-def _mention_candidates(query, limit=_MENTION_ROWS):
+def _mention_candidates(query: str | None, limit: int = _MENTION_ROWS) -> tuple[list[str], int]:
     try:
         skill_hits = _skill_candidates(query)
     except Exception:
@@ -261,7 +263,7 @@ def _mention_candidates(query, limit=_MENTION_ROWS):
     combined = skill_hits + [p for p in ranked if p not in skill_hits]
     return combined[:limit], len(skill_hits) + len(ranked)
 
-def _accept_mention(buffer, full_path):
+def _accept_mention(buffer: str | None, full_path: str) -> str | None:
     mention = _active_mention(buffer)
     if not mention:
         return buffer
@@ -274,7 +276,7 @@ MAX_PASTE_CHARS = 4000
 MAX_BUFFER_CHARS = 8000
 MAX_BUFFER_LINES = 100
 
-def _clip_paste(paste):
+def _clip_paste(paste: str | None) -> str:
     text = (paste or "").replace("\r\n", "\n").replace("\r", "\n").strip("\n")
     text = "\n".join(text.split("\n")[:MAX_PASTE_LINES])
     return text[:MAX_PASTE_CHARS]
@@ -282,7 +284,7 @@ def _clip_paste(paste):
 MENTION_COLOR = "\x1b[94m"
 MENTION_RESET = "\x1b[0m"
 
-def _highlight_mentions(buffer):
+def _highlight_mentions(buffer: str | None) -> str:
     if is_no_color():
         return buffer or ""
 
@@ -313,7 +315,7 @@ def _highlight_mentions(buffer):
         return "\x1b[1m\x1b[97m!\x1b[0m" + out
     return out
 
-def _filter_slash_commands(query):
+def _filter_slash_commands(query: str | None) -> list[dict[str, str]]:
     q = (query or "").lower()
     if not q.startswith("/"):
         return []
@@ -322,11 +324,11 @@ def _filter_slash_commands(query):
         return prefixed
     return [c for c in SLASH_COMMANDS if q.lstrip("/").lstrip() in c["name"]]
 
-def _win_redraw(buffer):
+def _win_redraw(buffer: str | None) -> None:
     sys.stdout.write("\r\x1b[K❯ " + (buffer or ""))
     sys.stdout.flush()
 
-def _win_input(prefill=""):
+def _win_input(prefill: str = "") -> str:
     try:
         import msvcrt
     except ImportError:
@@ -386,7 +388,7 @@ def _win_input(prefill=""):
     _st.console.print()
     return buffer
 
-def get_input(messages=None, prefill=""):
+def get_input(messages: list[dict[str, Any]] | None = None, prefill: str = "") -> str:
     from hazzel import wincompat
 
     if not sys.stdin.isatty():
@@ -777,10 +779,10 @@ MAX_DIFF_DISPLAY_LINES = 500
 
 VIEW_MAX_LINES = 2000
 
-def _is_tty():
+def _is_tty() -> bool:
     return sys.stdin.isatty() and sys.stdout.isatty()
 
-def _read_key(fd):
+def _read_key(fd: int) -> str:
     try:
         data = os.read(fd, 1)
         if not data:

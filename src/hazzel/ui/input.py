@@ -324,9 +324,69 @@ def _filter_slash_commands(query: str | None) -> list[dict[str, str]]:
         return prefixed
     return [c for c in SLASH_COMMANDS if q.lstrip("/").lstrip() in c["name"]]
 
-def _win_redraw(buffer: str | None) -> None:
-    sys.stdout.write("\r\x1b[K❯ " + (buffer or ""))
+def _win_candidate_lines(
+    filtered: list[dict[str, str]] | None,
+    selected: int,
+    m_cands: list[str] | None,
+    m_selected: int,
+    m_total: int,
+) -> list[str]:
+    term_width = max(20, _hw())
+    lines = []
+    if m_cands:
+        for i, cand in enumerate(m_cands):
+            disp = cand if len(cand) <= term_width - 6 else "…" + cand[-(term_width - 7):]
+            if i == m_selected:
+                lines.append(f"  ❯ {disp}")
+            else:
+                lines.append(f"    {disp}")
+        if m_total > len(m_cands):
+            lines.append(f"  +{m_total - len(m_cands)} more — keep typing to narrow")
+    elif filtered:
+        width = max([len(c["name"]) for c in filtered] + [8])
+        total = len(filtered)
+        visible = 5
+        start = max(0, min(selected - visible // 2, total - visible))
+        end = min(total, start + visible)
+        if end - start < visible:
+            start = max(0, end - visible)
+        for i in range(start, end):
+            c = filtered[i]
+            name = c["name"].ljust(width)
+            if i == selected:
+                lines.append(f"  ❯ {name}  {c['desc']}")
+            else:
+                lines.append(f"    {name}  {c['desc']}")
+        lines.append(f"  ({selected + 1}/{total})")
+    return [line[:term_width] for line in lines]
+
+
+def _win_clear_rendered(rendered: list[int] | None) -> None:
+    if rendered and rendered[0]:
+        if rendered[0] > 1:
+            sys.stdout.write(f"\x1b[{rendered[0] - 1}A")
+        sys.stdout.write("\r\x1b[J")
+        rendered[0] = 0
+
+
+def _win_redraw(
+    buffer: str | None,
+    extra_lines: list[str] | None = None,
+    rendered: list[int] | None = None,
+) -> None:
+    if rendered is not None and rendered[0]:
+        if rendered[0] > 1:
+            sys.stdout.write(f"\x1b[{rendered[0] - 1}A")
+        sys.stdout.write("\r\x1b[J")
+    lines = ["\r\x1b[K❯ " + (buffer or "")]
+    lines.extend(extra_lines or [])
+    sys.stdout.write("\r\n".join(lines))
     sys.stdout.flush()
+    if rendered is not None:
+        # _visual_rows counts cursor-up moves (rows minus one); rendered
+        # counts total visual rows so the cursor-up math stays right
+        # when a row wraps.
+        rendered[0] = _visual_rows(lines) + 1
 
 def _win_input(prefill: str = "") -> str:
     try:
@@ -342,44 +402,128 @@ def _win_input(prefill: str = "") -> str:
         _st.console.print()
         return line
     buffer = (prefill or "")[:MAX_BUFFER_CHARS]
-    _win_redraw(buffer)
+    selected = 0
+    s_last_query = None
+    m_selected = 0
+    m_last_query = None
+    m_cands = []
+    m_total = 0
+    rendered = [0]
+
+    def _win_refresh():
+        nonlocal selected, s_last_query, m_selected, m_last_query, m_cands, m_total
+        if buffer.startswith("/"):
+            filtered = _filter_slash_commands(buffer)
+            # Reset on query change like the Unix loop does on every
+            # edit; arrow moves leave the query unchanged, so the
+            # selection survives them. Clamping alone kept a stale
+            # index into the new filtered list.
+            if buffer != s_last_query:
+                selected = 0
+                s_last_query = buffer
+            elif selected >= len(filtered):
+                selected = 0
+            m_cands = []
+            m_total = 0
+            m_last_query = None
+        else:
+            filtered = []
+            selected = 0
+            s_last_query = None
+            mention = _active_mention(buffer)
+            if mention is None:
+                m_cands = []
+                m_total = 0
+                m_last_query = None
+            elif mention[1] != m_last_query:
+                m_selected = 0
+                m_last_query = mention[1]
+                m_cands, m_total = _mention_candidates(mention[1])
+        return filtered
+
+    def _win_redraw_current():
+        filtered = _win_refresh()
+        _win_redraw(
+            buffer,
+            _win_candidate_lines(filtered, selected, m_cands, m_selected, m_total),
+            rendered,
+        )
+        return filtered
+
+    filtered = _win_redraw_current()
     while True:
         try:
             ch = msvcrt.getwch()
         except (OSError, ValueError, KeyboardInterrupt):
             raise KeyboardInterrupt
         if ch in ("\r", "\n"):
+            if m_cands:
+                buffer = _accept_mention(buffer, m_cands[m_selected])
+                m_selected = 0
+                m_last_query = None
+                filtered = _win_redraw_current()
+                continue
+            if filtered:
+                buffer = filtered[selected]["name"]
             break
         if ch == "\x03":
+            _win_clear_rendered(rendered)
             sys.stdout.write("\r\n")
             sys.stdout.flush()
             raise KeyboardInterrupt
         if ch == "\x1a":
+            _win_clear_rendered(rendered)
             sys.stdout.write("\r\n")
             sys.stdout.flush()
             raise EOFError
         if ch in ("\x00", "\xe0"):
             try:
-                msvcrt.getwch()
+                second = msvcrt.getwch()
             except (OSError, ValueError, KeyboardInterrupt):
-                pass
+                continue
+            if second == "H":
+                if m_cands:
+                    m_selected = (m_selected - 1) % len(m_cands)
+                    filtered = _win_redraw_current()
+                elif filtered:
+                    selected = (selected - 1) % len(filtered)
+                    filtered = _win_redraw_current()
+            elif second == "P":
+                if m_cands:
+                    m_selected = (m_selected + 1) % len(m_cands)
+                    filtered = _win_redraw_current()
+                elif filtered:
+                    selected = (selected + 1) % len(filtered)
+                    filtered = _win_redraw_current()
             continue
         if ch == "\x1b":
             buffer = ""
-            _win_redraw(buffer)
+            filtered = _win_redraw_current()
             continue
         if ch == "\x15":
             buffer = ""
-            _win_redraw(buffer)
+            filtered = _win_redraw_current()
             continue
         if ch in ("\x08", "\x7f"):
             if buffer:
                 buffer = buffer[:-1]
-                _win_redraw(buffer)
+                filtered = _win_redraw_current()
             continue
-        if ch and (ch.isprintable() or ch in (" ", "\t")) and len(buffer) < MAX_BUFFER_CHARS:
+        if ch == "\t":
+            if m_cands:
+                buffer = _accept_mention(buffer, m_cands[m_selected])
+                m_selected = 0
+                m_last_query = None
+                filtered = _win_redraw_current()
+            elif filtered:
+                buffer = filtered[selected]["name"]
+                selected = 0
+                filtered = _win_redraw_current()
+            continue
+        if ch and (ch.isprintable() or ch == " ") and len(buffer) < MAX_BUFFER_CHARS:
             buffer += ch
-            _win_redraw(buffer)
+            filtered = _win_redraw_current()
+    _win_clear_rendered(rendered)
     sys.stdout.write("\r\n")
     sys.stdout.flush()
     rule()

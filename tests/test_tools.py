@@ -1,3 +1,4 @@
+import urllib.request  # noqa: F401 — tests patch urllib.request.urlopen on the tool modules
 from pathlib import Path
 from unittest.mock import patch
 

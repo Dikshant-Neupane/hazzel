@@ -134,13 +134,31 @@ def __dir__():
     return sorted(set(globals()) | set(_EXPORTS) | _STATE_NAMES)
 
 
+class _StateProxy:
+    """Data descriptor so `ui.<state>` stays backed by _state for writes too.
+
+    A plain `__setattr__` on the module class works for normal assignment,
+    but tools that read the module `__dict__` before patching (pytest 9+)
+    would record no old value and then delete only the cached copy, leaving
+    the replacement behind in _state.
+    """
+
+    def __init__(self, name):
+        self.name = name
+
+    def __get__(self, obj, objtype=None):
+        return getattr(_load("_state"), self.name)
+
+    def __set__(self, obj, value):
+        setattr(_load("_state"), self.name, value)
+
+
 class _UIModule(_ModuleType):
     """Module subclass so `ui.<state> = X` forwards to _state (live)."""
 
-    def __setattr__(self, name, value):
-        if name in _STATE_NAMES:
-            setattr(_load("_state"), name, value)
-        super().__setattr__(name, value)
+
+for _state_name in _STATE_NAMES:
+    setattr(_UIModule, _state_name, _StateProxy(_state_name))
 
 
 _sys.modules[__name__].__class__ = _UIModule

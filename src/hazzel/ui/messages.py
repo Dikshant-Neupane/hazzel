@@ -1,6 +1,9 @@
 """Assistant messages, tool rows, context meter, history, confirm/prompts."""
 
 
+from pathlib import Path
+from typing import Any
+
 from rich.text import Text
 
 from . import _state as _st
@@ -8,7 +11,7 @@ from ._state import DIM_COLOR, ERROR_COLOR, HAZZEL_COLOR, SUCCESS_COLOR, is_no_c
 from . import input as _ui_input
 from . import stream as _ui_stream
 
-def show_hazzel_message(message):
+def show_hazzel_message(message: str | None) -> None:
     _ui_stream.hide_loader()
     if not message or not message.strip():
         return
@@ -19,7 +22,7 @@ def show_hazzel_message(message):
     print_response(_st.console, message)
 
 
-def show_reasoning(reasoning):
+def show_reasoning(reasoning: str | None) -> None:
     _ui_stream.hide_loader()
     if _st._thinking_was_live:
         _st._thinking_was_live = False
@@ -40,7 +43,7 @@ def _short_detail(detail: str, limit: int = 62) -> str:
     return d
 
 
-def _relativize_detail(detail):
+def _relativize_detail(detail: str) -> str:
     try:
         from pathlib import Path as _Path
 
@@ -69,7 +72,7 @@ def _relativize_detail(detail):
     return " ".join(parts)
 
 
-def format_context_plain(used, window):
+def format_context_plain(used: Any, window: Any) -> str:
     try:
         used = max(0, int(used or 0))
     except (TypeError, ValueError):
@@ -89,7 +92,7 @@ def format_context_plain(used, window):
     return f"{used / window * 100:.1f}%/{short} (auto)"
 
 
-def format_context_meter(used, window):
+def format_context_meter(used: Any, window: Any) -> str:
     if is_no_color():
         return format_context_plain(used, window)
     try:
@@ -112,7 +115,7 @@ def format_context_meter(used, window):
     return f"\x1b[1m{color}{format_context_plain(used, window)}\x1b[0m\x1b[2m"
 
 
-def _format_elapsed(seconds):
+def _format_elapsed(seconds: Any) -> str:
     if seconds is None:
         return ""
     try:
@@ -132,7 +135,7 @@ _PREVIEW_MAX_LINES = 8
 _PREVIEW_MAX_CHARS = 480
 
 
-def _push_tool_row(row, refresh=True):
+def _push_tool_row(row: Text, refresh: bool = True) -> None:
     _st._tool_rows.append(row)
     while len(_st._tool_rows) > _ui_input._MAX_TOOL_ROWS:
         _st._tool_rows.pop(0)
@@ -140,7 +143,7 @@ def _push_tool_row(row, refresh=True):
         _st._loader.update(_ui_stream._live_body(None))
 
 
-def _format_result_preview(result, max_lines=_PREVIEW_MAX_LINES, max_chars=_PREVIEW_MAX_CHARS):
+def _format_result_preview(result: Any, max_lines: int = _PREVIEW_MAX_LINES, max_chars: int = _PREVIEW_MAX_CHARS) -> str:
     if not result:
         return "(no output)"
     text = str(result)
@@ -167,8 +170,8 @@ def _format_result_preview(result, max_lines=_PREVIEW_MAX_LINES, max_chars=_PREV
     return out + f"\n…{remaining} more lines"
 
 
-def show_tool(tool_name, detail="", success=True, exit_code=None, cached=False,
-              elapsed=None, result=None):
+def show_tool(tool_name: str, detail: str = "", success: bool = True, exit_code: int | None = None, cached: bool = False,
+              elapsed: float | int | None = None, result: Any = None) -> None:
     if _st._quiet:
         return
     icon = "●" if success else "!"
@@ -213,7 +216,7 @@ def show_tool(tool_name, detail="", success=True, exit_code=None, cached=False,
             _st._loader.update(_ui_stream._live_body(None))
 
 
-def _split_preview_rows(preview):
+def _split_preview_rows(preview: str) -> list[Text]:
     rows = []
     for i, line in enumerate(preview.splitlines()):
         t = Text()
@@ -226,14 +229,14 @@ def _split_preview_rows(preview):
     return rows
 
 
-def show_user_command(command):
+def show_user_command(command: str) -> None:
     text = Text()
     text.append("❯ ", style="dim")
     text.append(command.strip(), style="white")
     _st.console.print(text)
 
 
-def show_history(messages):
+def show_history(messages: list[dict[str, Any]] | None) -> None:
     items = []
     for msg in messages or []:
         if not isinstance(msg, dict):
@@ -275,14 +278,14 @@ def show_history(messages):
             _st.console.print()
 
 
-def show_error(message):
+def show_error(message: str) -> None:
     text = Text()
     text.append("  ! ", style=ERROR_COLOR)
     text.append(message, style=ERROR_COLOR)
     _st.console.print(text)
 
 
-def confirm(prompt):
+def confirm(prompt: str) -> bool:
     if _st._print_mode:
         return _st._auto_approve
     was_active = _ui_stream._pause_loader()
@@ -296,7 +299,7 @@ def confirm(prompt):
     return clean in {"y", "yes"}
 
 
-def show_undo(restored):
+def show_undo(restored: list[tuple[str, str]]) -> None:
     if not restored:
         _st.console.print(Text("  Nothing to undo.", style=DIM_COLOR))
         _st.console.print()
@@ -310,7 +313,7 @@ def show_undo(restored):
     _st.console.print()
 
 
-def show_redo(redone):
+def show_redo(redone: list[tuple[str, str]]) -> None:
     if not redone:
         _st.console.print(Text("  Nothing to redo.", style=DIM_COLOR))
         _st.console.print()
@@ -324,7 +327,7 @@ def show_redo(redone):
     _st.console.print()
 
 
-def show_undo_preview(items):
+def show_undo_preview(items: list[tuple[str, str, str]]) -> None:
     from .git.diff import show_diff
 
     if not items:
@@ -340,7 +343,7 @@ def show_undo_preview(items):
         show_diff(diff)
 
 
-def prompt_goal_criteria():
+def prompt_goal_criteria() -> str:
     was_active = _ui_stream._pause_loader()
     try:
         answer = input("  Done looks like what? [Enter to skip]: ")
@@ -351,7 +354,7 @@ def prompt_goal_criteria():
     return _ui_input._ANSI_RE.sub("", answer or "").strip()
 
 
-def show_model_selected(display_name, provider_display):
+def show_model_selected(display_name: str, provider_display: str) -> None:
     text = Text()
     text.append("  ✓ ", style=SUCCESS_COLOR)
     text.append(display_name, style="white")
@@ -360,7 +363,7 @@ def show_model_selected(display_name, provider_display):
     _st.console.print()
 
 
-def show_cleared():
+def show_cleared() -> None:
     text = Text()
     text.append("  ○ ", style=DIM_COLOR)
     text.append("Conversation cleared", style="dim")
@@ -368,7 +371,7 @@ def show_cleared():
     _st.console.print()
 
 
-def show_summary(summary, trace=None):
+def show_summary(summary: str | None, trace: list[dict[str, Any]] | None = None) -> None:
     if not summary:
         show_error("No implementation yet — run a task first.")
         _st.console.print("  Try asking Hazzel to inspect, create, or edit files.", style="dim")
@@ -399,7 +402,7 @@ def show_summary(summary, trace=None):
     _st.console.print()
 
 
-def show_copied(msg="Copied to clipboard."):
+def show_copied(msg: str = "Copied to clipboard.") -> None:
     _st.console.print()
     line = Text()
     line.append("  ", style="dim")
@@ -408,7 +411,7 @@ def show_copied(msg="Copied to clipboard."):
     _st.console.print()
 
 
-def show_export(path):
+def show_export(path: str | Path) -> None:
     _st.console.print()
     line = Text()
     line.append("  Exported to ", style="dim")
@@ -417,7 +420,7 @@ def show_export(path):
     _st.console.print()
 
 
-def show_star_ask(prefix="  "):
+def show_star_ask(prefix: str = "  ") -> None:
     """One-time star ask, rendered as a real OSC-8 hyperlink when supported.
 
     Called only after the first successful commit (see ``hazzel.star_ask``).

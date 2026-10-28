@@ -12,6 +12,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `hazzel --list-models` prints the built-in model catalog, one line per model (provider, model id, display name, context window), marking the configured model with `*`. Exits 0 with no API key, config write, or network access. (#35)
 - Named sessions: `/session save <name>` snapshots the current conversation, `/session list` shows saved sessions for this project (name, saved time, message count), and `/session restore <name>` loads one. Bare `/session restore` still reloads the last saved session, and `/clear` is unchanged. (#32)
 - `/version` in-session command: prints Hazzel version, Python version, current provider/model, and config file path, then returns to the prompt. No network, no API key, no config writes. (#36)
+- Type hints for every function in `src/hazzel/ui/input.py`, `src/hazzel/ui/stream.py` and `src/hazzel/ui/messages.py`. Annotation only, no behavior change. (#44)
 
 ## [1.6.2] - 2026-10-26
 ### Added

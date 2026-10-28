@@ -93,8 +93,11 @@ def test_win_input_prefill_and_type(monkeypatch, capsys):
 
 
 def test_win_input_backspace_and_esc(monkeypatch):
-    _msvcrt_keys(monkeypatch, ["\x08", "\r"])
-    assert ui.get_input(prefill="@helper ") == "@helper"
+    # Backspace leaves "@helper" with live mention candidates, so the first
+    # Enter accepts the top candidate (Unix parity) and the second submits.
+    cands, _ = ui._mention_candidates("helper")
+    _msvcrt_keys(monkeypatch, ["\x08", "\r", "\r"])
+    assert ui.get_input(prefill="@helper ") == "@" + cands[0] + " "
     _msvcrt_keys(monkeypatch, ["\x1b", "o", "k", "\r"])
     assert ui.get_input(prefill="@helper ") == "ok"
 
@@ -107,6 +110,34 @@ def test_win_input_ctrl_c_and_extended(monkeypatch):
         ui.get_input(prefill="@helper ")
     _msvcrt_keys(monkeypatch, ["\xe0", "H", "o", "k", "\r"])
     assert ui.get_input() == "ok"
+
+
+def test_win_input_slash_arrows_and_enter(monkeypatch):
+    _msvcrt_keys(monkeypatch, ["/", "\xe0", "P", "\r"])
+    assert ui.get_input() == "/think"
+    _msvcrt_keys(monkeypatch, ["/", "\xe0", "H", "\r"])
+    assert ui.get_input() == "/exit"
+    _msvcrt_keys(monkeypatch, ["/", "m", "o", "\r"])
+    assert ui.get_input() == "/model"
+
+
+def test_win_input_slash_selection_resets_on_query_change(monkeypatch):
+    # Review repro: "/", Down once, then "m" and Enter. Moving to
+    # "/m" must reset the selection to the top match ("/model"),
+    # not keep the stale index into the new list ("/mcp").
+    _msvcrt_keys(monkeypatch, ["/", "\xe0", "P", "m", "\r"])
+    assert ui.get_input() == "/model"
+
+
+def test_win_input_mention_tab_and_enter(monkeypatch):
+    cands, _ = ui._mention_candidates("")
+    assert cands
+    _msvcrt_keys(monkeypatch, ["@", "\t", "\r"])
+    assert ui.get_input() == "@" + cands[0] + " "
+    _msvcrt_keys(monkeypatch, ["@", "\xe0", "P", "\t", "\r"])
+    assert ui.get_input() == "@" + cands[1] + " "
+    _msvcrt_keys(monkeypatch, ["@", "\r", "\r"])
+    assert ui.get_input() == "@" + cands[0] + " "
 
 
 def test_safe_commands_windows(monkeypatch):
